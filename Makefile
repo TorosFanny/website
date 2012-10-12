@@ -12,7 +12,7 @@ cv.txt: cv-nofmts.html plaintext.hs
 	runhaskell plaintext.hs < cv-nofmts.html > $@
 
 cv.pdf: cv-nofmts.html
-	./makepdf $(HTML_FILES)
+	wkhtmltopdf cv-nofmts.html cv.pdf
 
 clean:
 	rm -f cv.html cv-nofmts.html cv.txt cv.pdf
