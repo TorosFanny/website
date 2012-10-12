@@ -3,7 +3,7 @@ HTML_FILES = logo.png
 all: cv.html cv.pdf cv.txt
 
 cv.html: source.html $(HTML_FILES)
-	sed 's/%%formats%%/<li class="formats"><a href=".\/cv.txt">Plain text<\/a> \&middot; <a href=".\/cv.pdf">Pdf<\/a><\/li>/' source.html > $@
+	sed 's/%%formats%%/<li class="formats"><a href=".\/cv.txt">plain text<\/a> \&middot; <a href=".\/cv.pdf">pdf<\/a><\/li>/' source.html > $@
 
 cv-nofmts.html: source.html $(HTML_FILES)
 	sed 's/%%formats%%//' source.html > $@

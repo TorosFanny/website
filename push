@@ -1,3 +1,4 @@
 #!/bin/bash
 
+make all
 scp cv.pdf cv.html cv.txt logo.png $1

@@ -85,9 +85,14 @@
           display: none;
       }
 
-      @media print {
-          .break {
-              page-break-before: always;
+      .break {
+          page-break-before: always;
+          clear: both;
+      }
+
+      @page {
+          @bottom {
+              content: counter(page) " of " counter(pages);
           }
       }
     </style>
@@ -193,7 +198,7 @@
       </p>
       <p>
         Worked with various Google technologies, including GWT, Guice, Protocol
-        buffers</a>, and Megastore.
+        buffers, and Megastore.
       </p>
 
       <h3><span class="date">Dec 2010<span class="datesep"> -</span></span> andreaciofi.com</h3>
