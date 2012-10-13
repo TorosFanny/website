@@ -7,9 +7,8 @@
 
     <style type="text/css">
       body {
-          width: 70em;
-          font-family: "Linux Libertine O", sans-serif;
-          font-size: 1em;
+          font-family: Georgia, serif;
+          font-size: %%font-size%%;
           color: black;
       }
 
@@ -22,6 +21,7 @@
           display: inline;
           font-variant: small-caps;
           padding-left: 1em;
+          font-family: Arial, sans-serif;
       }
 
       h2 {
@@ -29,11 +29,15 @@
           font-variant: small-caps;
           font-size:1.5em;
           border-bottom: 1px solid black;
+          font-family: Arial, sans-serif;
       }
 
       h3 {
           font-size:1.2em;
           border-bottom: 1px solid #ccc;
+          font-family: Arial, sans-serif;
+          margin-left: 1em;
+          margin-right: 1em;
       }
 
       ul {
@@ -48,6 +52,11 @@
           width: 60em;
           margin: 1.5em auto;
           text-align: left;
+      }
+
+      p {
+          margin-left: 2em;
+          margin-right: 2em;
       }
 
       #contact {
@@ -85,15 +94,10 @@
           display: none;
       }
 
-      .break {
-          page-break-before: always;
-          clear: both;
-      }
+      @page { 
+          size: auto;
 
-      @page {
-          @bottom {
-              content: counter(page) " of " counter(pages);
-          }
+          margin: 25mm;
       }
     </style>
 
@@ -120,7 +124,7 @@
       <h3><span class="date">Jul 2009<span class="datesep"> -</span></span> Esame di Stato, Liceo scientifico Augusto Righi</h3>
       <p>Overall exam result: <strong>95%</strong>. </p>
 
-      <h2>Skills and competences</h2>
+      <h2>Skills &amp; Competences</h2>
       <h3>Programming and software engineering</h3>
       <ul>
         
@@ -158,7 +162,7 @@
         </li>
       </ul>
 
-      <h3>Soft skills</h3>
+      <h3>Soft Skills</h3>
       <ul>
         <li>
           Good experience in working in teams, both for personal and university
@@ -175,9 +179,9 @@
         </li>
       </ul>
 
-      <h2>Work experience &amp; personal projects</h2>
+      <h2>Work Experience &amp; Personal Projects</h2>
 
-      <h3><span class="date">Jan 2012-Present<span class="datesep"> -</span></span> Industrial placement at RabbitMQ</h3>
+      <h3><span class="date">Jan 2012-Present<span class="datesep"> -</span></span> Industrial Placement at RabbitMQ</h3>
       <p>
         Working at RabbitMQ, first as a contractor, then full time from April to
         October, and then as a contractor again as university starts.
@@ -188,7 +192,7 @@
         related software - mainly plugins for the broker and AMQP clients.
       </p>
 
-      <h3><span class="date">Jun-Sep 2011<span class="datesep"> -</span></span> Internship in software engineering at Google</h3>
+      <h3><span class="date">Jun-Sep 2011<span class="datesep"> -</span></span> Internship in Software Engineering at Google</h3>
       <p>
         Worked on the Android Market, developing a system that enables the
         support team to broadcast announcements to developers, which appear on
@@ -220,7 +224,7 @@
         (halted).
       </p>
 
-      <h3>Assorted software <span id="github">(available
+      <h3>Assorted Software <span id="github">(available
           on <a href="https://github.com/bitonic/">https://github.com/bitonic/</a>)</span></h3>
       <ul>
         <li>
@@ -268,7 +272,7 @@
         <li>Countless unfinished bits of Haskell code.</li>
       </ul>
 
-      <h2 class="break">Achievements &amp; university projects</h2>
+      <h2>Achievements &amp; University Projects</h2>
       <h3><span class="date">Oct 2012<span class="datesep"> -</span></span> Wonga Scolarship</h3>
       <p>
         Won a competition by Wonga directed to Masters students, with 3-5
@@ -315,7 +319,7 @@
         backend.
       </p>
 
-      <h3><span class="date">Jan 2010<span class="datesep"> -</span></span> Haskell final exam prize</h3>
+      <h3><span class="date">Jan 2010<span class="datesep"> -</span></span> Haskell Final Exam Prize</h3>
       <p>
         Problem solving prize, awarded by the department to the students that
         solved a bonus non for credit question in the final Haskell exam.
