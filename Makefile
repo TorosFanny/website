@@ -1,4 +1,4 @@
-nHTML_FILES = logo.png
+HTML_FILES = logo.png
 
 all: cv.html cv.pdf cv.txt
 
@@ -12,7 +12,7 @@ cv.txt: cv-nofmts.html plaintext.hs
 	runhaskell plaintext.hs < cv-nofmts.html | sed 's/-   <f@mazzo.li>/<f@mazzo.li>/' > $@
 
 cv.pdf: cv-nofmts.html
-	wkhtmltopdf cv-nofmts.html cv.pdf
+	wkhtmltopdf -B 20 -L 25 -T 20 -R 25 cv-nofmts.html cv.pdf
 
 clean:
 	rm -f cv.html cv-nofmts.html cv.txt cv.pdf

@@ -1,4 +1,4 @@
 #!/bin/bash
 
 make all
-scp cv.html cv.txt logo.png $1
+scp cv.html cv.txt logo.png index.html bg.jpg $1
