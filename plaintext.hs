@@ -16,10 +16,10 @@ transformDoc :: Pandoc -> Pandoc
 transformDoc = bottomUp (concatMap stripImages) . bottomUp (strongToEmph . autoLink)
 
 readDoc :: String -> Pandoc
-readDoc = readHtml defaultParserState
+readDoc = readHtml def
 
 writeDoc :: Pandoc -> String
-writeDoc = writeMarkdown defaultWriterOptions
+writeDoc = writeMarkdown def
 
 main :: IO ()
 main = interact (writeDoc . transformDoc . readDoc)
