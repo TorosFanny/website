@@ -1,0 +1,204 @@
+html, body, div, span, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+abbr, address, cite, code,
+del, dfn, em, img, ins, kbd, q, samp,
+small, strong, sub, sup, var,
+b, i,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section, summary,
+time, mark, audio, video {
+    margin:0;
+    padding:0;
+    border:0;
+    outline:0;
+    font-size:1em;
+    vertical-align:baseline;
+    background:transparent;
+    font-variant:normal;
+}
+
+body {
+    width: 55em;
+    margin: 0 auto 0 auto;
+    font-family: LinuxBiolinum, Helvetica, Arial, sans-serif;
+    color:#1e1e1e;
+    text-align:justify;
+    padding:0.8em 0;
+    background-color: #ffffff;
+}
+
+h1 {
+    font-size:4em;
+    padding:0;
+    text-align:right;
+    text-shadow: 1px 1px 0px black, 2px 2px 0px #476871, 3px 3px 0px #476871, 4px 4px 0px #476871, 5px 5px 0px #476871, 6px 6px 0px #476871, 7px 7px 0px #476871;
+}
+
+h1 a {
+    text-decoration:none;
+    color:#E3D7BF;
+}
+
+h1 a:hover {
+
+    -moz-transform: rotate(3deg);
+}
+ 
+#footer a {
+    color:#1e1e1e;
+}
+
+#footer {
+    margin-top:0.8em;
+    text-align:right;
+    padding:0.7em 0 0 0;
+}
+
+code {
+    font-family: Consolas, Inconsolata, "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Menlo, Monaco, monospace;
+}
+
+/* Stuff for the index */
+
+#articles {
+    padding:0.7em 0;
+}
+#articles ul {
+    list-style:none;
+    font-size:2em;
+    text-align:left;
+}
+
+#articles li {
+    clear:both;
+    padding:0.15em 0;
+}
+
+#articles em {
+    float:right;
+    color:#5b5b5b;
+    font-weight:normal;
+    padding:0 0 0 1em;
+    text-shadow: none;
+}
+
+#articles a {
+    text-decoration:none;
+    color:#476871;
+    font-weight:bold;
+    text-shadow: -1px -1px 0 black;
+}
+
+#about {
+    padding:0.7em 0;
+}
+
+#about a {
+    color:#1e1e1e;
+}
+
+/* Stuff for the article display */
+
+#article {
+    padding:0.7em 0;
+}
+
+#article h2 {
+    font-size:2em;
+    padding:0.15em 0;
+    text-align:left;
+    color:#476871;
+    text-shadow: -1px -1px 0 black;
+}
+
+#article h2 em {
+    float:right;
+    color:#5b5b5b;
+    font-weight:normal;
+    padding:0 0 0 1em;
+    text-shadow:none;
+}
+
+#article p {
+    padding:0.1em 0;
+    text-indent:1.5em;
+}
+
+#article h3 {
+    font-weight:bold;
+    font-size:1.3em;
+    padding:0.8em 0 0.3em 0;
+}
+
+#article a {
+    color: black;
+}
+
+#article ul {
+    margin:0.2em 1.5em;
+}
+
+#article li {
+    margin:0 0 0.2em 0;
+}
+
+/* Pandoc */
+pre.sourceCode {
+    margin:0.2em 0;
+    padding:0.4em 0.7em;
+    background-color:#f3f3bb;
+}
+
+table.sourceCode {
+    width:100%;
+}
+
+/* Disqus */
+#dsq-content h3 {
+    margin-bottom:1em !important;
+}
+
+#dsq-global-toolbar {
+    display:none !important;
+}
+
+#dsq-reply h3 {
+    display: inline !important;
+}
+
+#dsq-reply .dsq-avatar {
+    padding:1em 0 0 0 !important;
+}
+
+#dsq-reply .dsq-textarea {
+    margin-top:1em !important;
+}
+
+.dsq-textarea-background {
+    background:white !important;
+    -moz-box-shadow: none !important;
+    border: 1px solid #1e1e1e !important;
+}
+
+.dsq-post-tools {
+    background:white !important;
+    border:none !important;
+}
+
+.dsq-button {
+    -moz-box-shadow: none !important;
+    border: 1px solid #1e1e1e !important;
+    -moz-border-radius: 4px 0 4px 0 !important;
+}
+
+.dsq-comment-header {
+    border: 1px solid #1e1e1e !important;
+}
+
+#dsq-footer {
+    margin-left:1.5em !important;
+    margin-right:1.5em !important;
+}
