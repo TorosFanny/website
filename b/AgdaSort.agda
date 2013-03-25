@@ -1,4 +1,16 @@
-module SortNoSize where
+module AgdaSort where
+
+--------------------------------------------------------------------------------
+-- Lists
+
+infixr 5 _∷_
+data List (X : Set) : Set where
+  []  : List X
+  _∷_ : X → List X → List X
+
+foldr : ∀ {A} {B : Set} → (A → B → B) → B → List A → B
+foldr f b [] = b
+foldr f b (a ∷ as) = f a (foldr f b as)
 
 --------------------------------------------------------------------------------
 -- Trivial type, and empty type
@@ -12,22 +24,6 @@ infix 3 ¬_
 
 absurd : {X : Set} → False → X
 absurd ()
-
---------------------------------------------------------------------------------
--- Lists
-
-infixr 5 _∷_
-data List (X : Set) : Set where
-  []  : List X
-  _∷_ : X → List X → List X
-
-{-# BUILTIN LIST List #-}
-{-# BUILTIN NIL  []   #-}
-{-# BUILTIN CONS _∷_  #-}
-
-foldr : ∀ {A} {B : Set} → (A → B → B) → B → List A → B
-foldr f b [] = b
-foldr f b (a ∷ as) = f a (foldr f b as)
 
 --------------------------------------------------------------------------------
 -- Dependent product and sum

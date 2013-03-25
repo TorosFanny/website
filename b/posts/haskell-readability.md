@@ -1,5 +1,7 @@
-Haskell, Python and readability
-===============================
+---
+title: Haskell, Python and readability
+date: 2012-02-27
+---
 
 This weekend on [/r/programming](http://www.reddit.com/r/programming)
 someone posted a [nice
