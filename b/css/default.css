@@ -17,16 +17,20 @@ summary, time, mark, audio, video {
 body {
     background-color: #ffffff;
     color:#1e1e1e;
-    font-family: LinuxBiolinum, Helvetica, Arial, sans-serif;
+    font-family: Georgia, serif;
     font-size:1.2em;
     margin: 0 auto 0 auto;
     padding:0.8em 0;
     text-align:justify;
-    width: 55em;
+    width: 42em;
     background-image: url('../images/face_bg.png');
     background-repeat: no-repeat;
     background-attachment: fixed;
     background-position: right bottom; 
+}
+
+h1, h2, h3 {
+    font-family: LinuxBiolinum, Helvetica, Arial, sans-serif;
 }
 
 h1 {
@@ -62,14 +66,6 @@ div {
     text-align:right;
 }
 
-code {
-    font-family: "DejaVu Sans Mono",
-                 Consolas,
-                 Inconsolata,
-                 "Liberation Mono",
-                 monospace;
-}
-
 /* Stuff for the index */
 
 #articles ul {
@@ -98,10 +94,6 @@ code {
     text-shadow: -1px -1px 0 black;
 }
 
-#articles p {
-    padding: 0.3em;
-}
-
 /* Stuff for the article display */
 
 #article h2 {
@@ -120,9 +112,10 @@ code {
     text-shadow:none;
 }
 
-#article p {
+p {
     padding:0.1em 0;
     text-indent:1.5em;
+    font-family: Georgia, serif;
 }
 
 #article h3 {

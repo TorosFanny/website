@@ -3,36 +3,33 @@ title: Haskell, Python and readability
 date: 2012-02-27
 ---
 
-This weekend on [/r/programming](http://www.reddit.com/r/programming)
-someone posted a [nice
-introduction](http://v1v3kn.tumblr.com/post/18238156967/roll-your-own-autocomplete-solution-using-tries)
-to tries using Python. A while ago, I had implemented a [mini web
-server](https://github.com/bitonic/suggest) to do completion and
-correction of words using Ternary Search Tries in Haskell, and since
-the trie post generated a lot of interest I decided to [post it](http://www.reddit.com/r/programming/comments/q5dz2/roll_your_own_fast_completion_and_correction/).
+This weekend on [/r/programming](http://www.reddit.com/r/programming) someone
+posted a
+[nice introduction](http://v1v3kn.tumblr.com/post/18238156967/roll-your-own-autocomplete-solution-using-tries)
+to tries using Python. A while ago, I had implemented a
+[mini web server](https://github.com/bitonic/suggest) to do completion and
+correction of words using Ternary Search Tries in Haskell, and since the trie
+post generated a lot of interest I decided to
+[post it](http://www.reddit.com/r/programming/comments/q5dz2/roll_your_own_fast_completion_and_correction/).
 
-Then, someone else posted a [blog
-article](http://www.reddit.com/r/programming/comments/q5dz2/roll_your_own_fast_completion_and_correction/c3v6ruo)
-commenting on the readability of Python and Haskell based on my web
-server code and the trie example, concluding that the Python version
-was much more readable.
+Then, someone else posted a
+[blog article](http://www.reddit.com/r/programming/comments/q5dz2/roll_your_own_fast_completion_and_correction/c3v6ruo)
+commenting on the readability of Python and Haskell based on my web server code
+and the trie example, concluding that the Python version was much more readable.
 
-I personally prefer writing and reading Haskell, but I think that the
-comparison is not that fair to Haskell since the data structures
-compared are very different. Thus, I quickly coded an Haskell version
-of the code in the original blog post, so that you can compare code that
-does, more or less, the same thing.
+I personally prefer writing and reading Haskell, but I think that the comparison
+is not fair since the data structures compared are very different. Thus, I
+quickly coded an Haskell version of the code in the original blog post, so that
+you can compare code that does, more or less, the same thing.
 
-The only difference is that I don't store the current word in each
-node, since it is not necessary (the current word can be kept track
-when traversing the path). Also, I'm using lists instead of sets when
-returning the completions, but changing that would be trivial using
-Data.Set.
+The only difference is that I don't store the current word in each node, since
+it is not necessary---the current word can be kept track of when traversing the
+path. Also, I'm using lists instead of sets when returning the completions, but
+changing that would be trivial using `Data.Set`.
 
-Moreover, the Haskell version has the advantage of working with any
-list, so for example it would work with list of integers as well as Strings.
-This could be further abstracted to "unconsable" data types (a non-monadic
-version of
+Moreover, the Haskell version has the advantage of working with any list, so for
+example it would work with list of integers as well as Strings.  This could be
+further abstracted to "unconsable" data types (a non-monadic version of
 [Stream](http://hackage.haskell.org/packages/archive/parsec/3.1.2/doc/html/Text-Parsec-Prim.html#t:Stream))
 but that's not that relevant here.
 
@@ -113,19 +110,19 @@ empty = Trie Map.empty False
 insert []      (Trie m _) = Trie m True
 insert (c : w) (Trie m b) =
     case Map.lookup c m of
-        Nothing -> insert (c : w) $ Trie (Map.insert c empty m) b
+        Nothing -> insert (c : w) (Trie (Map.insert c empty m) b)
         Just tr -> Trie (Map.insert c (insert w tr) m) b
 
 find []      (Trie _ b) = b
-find (c : w) (Trie m _) = maybe False (find w) $ Map.lookup c m
+find (c : w) (Trie m _) = maybe False (find w) (Map.lookup c m)
 
 complete []      (Trie m b) =
     [[] | b] ++ concat [map (c :) (complete [] tr) | (c, tr) <- Map.toList m]
-complete (c : w) (Trie m _) =
-    maybe [] (map (c :) . complete w) $ Map.lookup c m
+complete (c : w) (Trie m _) = maybe [] (map (c :) . complete w) (Map.lookup c m)
 ```
 
-I didn't read the Python version too carefully so if I missed something let me know!
+I didn't read the Python version too carefully so if I missed something let me
+know!
 
 You can discuss this post on
 [reddit](http://www.reddit.com/r/programming/comments/q80nh/haskell_python_and_readability/).
