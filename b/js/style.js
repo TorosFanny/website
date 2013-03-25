@@ -1,80 +1,26 @@
 // Various functions relative to the styling of the page.
 
 var shadowHeight = 6;
-var cookieName = 'effects';
 var effects = [colorsTrans, colorsRun, colorsBlink, shadowColor];
 
-window.addEvent('domready', function() {
-    var title = $$('a')[0];
-
-    getEffects()(title);
+$(document).ready(function() {
+    getEffect()($("#title"));
 });
 
-function getEffects() {
-    var effectsCookie = Cookie.read(cookieName);
-    
-    var list, ev;
-    if (effectsCookie) {
-
-        list = eval(effectsCookie);
-
-        var fail = function() {
-            Cookie.dispose(cookieName);
-            return getEffects();
-        };
-
-        if (list.length > 0) {
-            ev = list.pop();
-            
-            if (typeOf(ev) === 'number' && ev >= 0 && ev < effects.length) {
-                Cookie.write(cookieName, JSON.stringify(list));
-                return effects[ev];
-            } else {
-                return fail();
-            }
-        } else {
-            return fail();
-        }
-
-    } else {
-        var i, j, t;
-        list = [];
-
-        for (i = 0; i < effects.length; i++) {
-            list[i] = i;
-        }
-
-        for (i = 1; i < list.length; i++) {
-            j = Math.floor(Math.random() * (1 + i));
-            if (j !== i) {
-                t = list[i];
-                list[i] = list[j];
-                list[j] = t;
-            }
-        }
-
-        ev = list.pop();
-        Cookie.write(cookieName, JSON.stringify(list));
-        return effects[ev];
-    }
+function getEffect() {
+    return effects[Math.floor(Math.random() * effects.length)];
 }
 
 function colorsTrans(el) {
-    el.setStyle('color', nextColor());
+    el.css("transition", "color 1s");
 
-    var colTween = new Fx.Tween(el, {
-        duration: '1000'
-    });
+    var changeColor = function () { el.css("color", nextColor()); };
+    transitionEnd(el, changeColor);
 
-    var setColor = function() {
-        colTween.start('color', nextColor());
-    };
-
-    colTween.addEvent('complete', setColor);
-
-    setColor();
+    changeColor();
 }
 
+// TODO is it worth doing that with transitions?
 function colorsRun(el) {
     var colors = [];
     var spans = spannify(el);
@@ -87,7 +33,7 @@ function colorsRun(el) {
     var changeColors = function() {
         var i;
         for (i = 0; i < spans.length; i++) {
-            spans[i].setStyle('color', colors[i]);
+            spans[i].css("color", colors[i]);
         }
 
         colors.shift();
@@ -100,28 +46,22 @@ function colorsRun(el) {
 }
 
 function colorsBlink(el) {
-    var colTween = new Fx.Tween(el, {
-        duration: '200'
-    });
-    
-    var blackTween = new Fx.Tween(el, {
-        duration: '200'
-    });
+    el.css("transition", "color 0.3s");
 
-    colTween.addEvent('complete', function() {
-        setTimeout(function() {
-            blackTween.start('color', $(document.body).getStyle('background-color'));
-        }, 200);
-    });
+    var toNext = function() {
+        transitionEnd(el, toBack);
+        el.css("color", nextColor());
+    };
+    var toBack = function() {
+        transitionEnd(el, toNext);
+        el.css("color", $(document.body).css("background-color"));
+    };
 
-    blackTween.addEvent('complete', function() {
-        colTween.start('color', nextColor());
-    });
-
-    blackTween.start('color', $(document.body).getStyle('background-color'));
+    toBack();
 }
 
 function shadowColor(el) {
+    el.css("transition", "text-shadow 0.1s");
     var colors = [];
     var i;
 
@@ -130,38 +70,63 @@ function shadowColor(el) {
     }
 
     var colorShadow = function() {
-        var i;
-        var shadow = '1px 1px 0px black';
-
         colors.shift();
         colors.push(nextColor());
 
-        for (i = 0; i < shadowHeight; i++) {
-            shadow += ', ' + (i + 2) + 'px ' + (i + 2) + 'px 0px ' + colors[i]; 
-        }
-
-        el.setStyle('text-shadow', shadow);
-
-        setTimeout(colorShadow, 100);
+        el.css("text-shadow", buildShadow(colors));
     };
 
+    transitionEnd(el, colorShadow);
+
     colorShadow();
+}
+
+// TODO fixme
+function shadowHeights(el) {
+    var jump = 3;
+    var i;
+
+    var shadow = function(height) {
+        colors = [];
+        for (i = 0; i < height; i++) {
+            colors.push("#476871");
+        }
+        return buildShadow(colors);
+    }
+
+    var change = function(el, h) {
+        var newh;
+        if (h < shadowHeight / 2) {
+            newh = h + jump + Math.random(shadowHeight - h - jump);
+        } else {
+            newh = shadowHeight - jump - Math.random(h - jump);
+        }
+        var t = newh * 0.1;
+        
+        el.css("transition", "text-shadow " + t + "s");
+        transitionEnd(el, function() { change(el, newh); });
+        el.css("text-shadow", shadow(newh));
+    }
+
+    var spans = spannify(el);
+    for (i = 0; i < spans.length; i++) {
+        change(spans[i], shadowHeight);
+    }
 }
 
 function spannify(el) {
     var spans = [];
     var i;
+    var s = el.text();
 
-    for (i = 0; i < el.get('text').length; i++) {
-        spans[i] = new Element('span', {
-            text: el.get('text').charAt(i)
-        });
+    for (i = 0; i < s.length; i++) {
+        spans[i] = $("<span>", {text: s.charAt(i)});
     }
 
     el.empty();
 
     for (i = 0; i < spans.length; i++) {
-        el.grab(spans[i]);
+        spans[i].appendTo(el);
     }
 
     return spans;
@@ -183,44 +148,20 @@ function nextColor(treshold_up, treshold_down) {
         return nextColor(treshold_up, treshold_down);
     }
 
-    return 'rgb(' + r + ',' + g + ',' + b + ')';
+    return "rgb(" + r + "," + g + "," + b + ")";
 }
 
+function transitionEnd(el, f) {
+    el.unbind("transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd");
+    el.bind("transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd", f);
+}
 
-// function shadowHeights(el) {
-//     var spans = [];
+function buildShadow(colors) {
+    var shadow = "1px 1px 0px black";
 
-//     for (var i = 0; i < el.get('text').length; i++) {
-//         spans[i] = new Element('span', {
-//             text: el.get('text').charAt(i)
-//         });
-//     }
+    for (i = 0; i < colors.length; i++) {
+        shadow += ', ' + (i + 2) + 'px ' + (i + 2) + 'px ' + '0px ' + colors[i];
+    }
 
-//     el.empty();
-
-//     el.setStyle('text-shadow', 'none');
-
-//     for (var i = 0; i < spans.length; i++) {
-//         el.grab(spans[i]);
-//     }        
-
-//     var buildShadow = function(height) {
-//         var shadow = '1px 1px 0px black';
-        
-//         for (var i = 0; i < height; i++) {
-//             shadow += ', ' + (i + 2) + 'px ' + (i + 2) + 'px ' + '0px #476871';
-//         }
-
-//         return shadow;
-//     };
-    
-//     function changeHeights() {
-//         for (var i = 0; i < spans.length; i++) {
-//             spans[i].setStyle('text-shadow',
-//                               buildShadow(Math.floor(Math.random() * (shadowHeight + 1))));
-//         }        
-//         setTimeout(changeHeights, 300);
-//     }
-
-//     changeHeights();
-// }
+    return shadow;
+}
