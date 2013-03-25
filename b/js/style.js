@@ -54,7 +54,9 @@ function colorsBlink(el) {
     };
     var toBack = function() {
         transitionEnd(el, toNext);
-        el.css("color", $(document.body).css("background-color"));
+        setTimeout(function() {
+            el.css("color", $(document.body).css("background-color"));
+        }, 500);
     };
 
     toBack();
@@ -83,10 +85,11 @@ function shadowColor(el) {
 
 // TODO fixme
 function shadowHeights(el) {
-    var jump = 3;
+    var jump = 2;
     var i;
 
     var shadow = function(height) {
+        var i;
         colors = [];
         for (i = 0; i < height; i++) {
             colors.push("#476871");
@@ -97,19 +100,18 @@ function shadowHeights(el) {
     var change = function(el, h) {
         var newh;
         if (h < shadowHeight / 2) {
-            newh = h + jump + Math.random(shadowHeight - h - jump);
+            newh = h + jump + random(shadowHeight - h - jump);
         } else {
-            newh = shadowHeight - jump - Math.random(h - jump);
+            newh = h - jump - random(h - jump);
         }
-        var t = newh * 0.1;
-        
-        el.css("transition", "text-shadow " + t + "s");
+        console.log(newh);
         transitionEnd(el, function() { change(el, newh); });
         el.css("text-shadow", shadow(newh));
     }
 
     var spans = spannify(el);
-    for (i = 0; i < spans.length; i++) {
+    for (i = 0; i < 1; i++) {
+        spans[i].css("transition", "text-shadow 1s");
         change(spans[i], shadowHeight);
     }
 }
@@ -140,15 +142,19 @@ function nextColor(treshold_up, treshold_down) {
         treshold_down = 0;
     }
 
-    var r = Math.floor(Math.random() * 256);
-    var g = Math.floor(Math.random() * 256);
-    var b = Math.floor(Math.random() * 256);
+    var r = random(256);
+    var g = random(256);
+    var b = random(256);
 
     if (r + g + b > treshold_up || r + g + b < treshold_down) {
         return nextColor(treshold_up, treshold_down);
     }
 
     return "rgb(" + r + "," + g + "," + b + ")";
+}
+
+function random(i) {
+    return Math.floor(Math.random() * i);
 }
 
 function transitionEnd(el, f) {
