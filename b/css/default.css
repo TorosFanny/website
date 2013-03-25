@@ -1,15 +1,9 @@
-html, body, div, span, object, iframe,
-h1, h2, h3, h4, h5, h6, p, blockquote, pre,
-abbr, address, cite, code,
-del, dfn, em, img, ins, kbd, q, samp,
-small, strong, sub, sup, var,
-b, i,
-dl, dt, dd, ol, ul, li,
-fieldset, form, label, legend,
-table, caption, tbody, tfoot, thead, tr, th, td,
-article, aside, canvas, details, figcaption, figure, 
-footer, header, hgroup, menu, nav, section, summary,
-time, mark, audio, video {
+html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote,
+pre, abbr, address, cite, code, del, dfn, em, img, ins, kbd, q, samp, small,
+strong, sub, sup, var, b, i, dl, dt, dd, ol, ul, li, fieldset, form, label,
+legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas,
+details, figcaption, figure, footer, header, hgroup, menu, nav, section,
+summary, time, mark, audio, video {
     margin:0;
     padding:0;
     border:0;
@@ -28,7 +22,7 @@ body {
     text-align:justify;
     padding:0.8em 0;
     background-color: #ffffff;
-    font-size:1.1em;
+    font-size:1.2em;
 }
 
 h1 {
@@ -38,7 +32,13 @@ h1 {
 
 h1 a {
     font-size:4em;
-    text-shadow: 1px 1px 0px black, 2px 2px 0px #476871, 3px 3px 0px #476871, 4px 4px 0px #476871, 5px 5px 0px #476871, 6px 6px 0px #476871, 7px 7px 0px #476871;
+    text-shadow: 1px 1px 0px black,
+                 2px 2px 0px #476871,
+                 3px 3px 0px #476871,
+                 4px 4px 0px #476871,
+                 5px 5px 0px #476871,
+                 6px 6px 0px #476871,
+                 7px 7px 0px #476871;
 }
 
 h1 a {
@@ -56,7 +56,11 @@ h1 a {
 }
 
 code {
-    font-family: Consolas, Inconsolata, "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Menlo, Monaco, monospace;
+    font-family: "DejaVu Sans Mono",
+                 Consolas,
+                 Inconsolata,
+                 "Liberation Mono",
+                 monospace;
 }
 
 /* Stuff for the index */
@@ -74,7 +78,7 @@ code {
     padding:0.15em 0;
 }
 
-#articles em {
+#articles .date {
     float:right;
     color:#5b5b5b;
     font-weight:normal;
