@@ -28,6 +28,7 @@ body {
     text-align:justify;
     padding:0.8em 0;
     background-color: #ffffff;
+    font-size:1.1em;
 }
 
 h1 {
@@ -44,20 +45,14 @@ h1 a {
     text-decoration:none;
     color:#E3D7BF;
 }
-
-h1 a:hover {
-
-    -moz-transform: rotate(3deg);
-}
  
 #footer a {
     color:#1e1e1e;
 }
 
 #footer {
-    margin-top:0.8em;
     text-align:right;
-    padding:0.7em 0 0 0;
+    padding:0.7em 0;
 }
 
 code {
@@ -71,7 +66,6 @@ code {
 }
 #articles ul {
     list-style:none;
-    font-size:2em;
     text-align:left;
 }
 
@@ -89,18 +83,15 @@ code {
 }
 
 #articles a {
-    text-decoration:none;
-    color:#476871;
-    font-weight:bold;
+    text-decoration: none;
+    color: #476871;
+    font-weight: bold;
     text-shadow: -1px -1px 0 black;
+    font-size: 2em;
 }
 
-#about {
-    padding:0.7em 0;
-}
-
-#about a {
-    color:#1e1e1e;
+#articles p {
+    padding: 0.3em;
 }
 
 /* Stuff for the article display */
