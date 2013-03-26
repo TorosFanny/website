@@ -3,45 +3,54 @@ title: Agda by Example: Sorting
 date: 2013-03-25
 ---
 
-## Dependent types?  Agda?
+## Agda?
 
 The Haskell programmer is used to the pleasure of collaborating with a nice type
 system.  Haskell itself hits quite a sweet spot of expressivity and
 manageability---type inference is (mostly) decidable, no subtyping, etc.
 However, in the past 30 years, new systems have been emerging that allow the
 user to encode many more properties at the type level.  In fact, these systems
-are so expressive that they are often used as logical frameworks to prove
-theorems rather than to write programs, and are thus called 'theorem provers'
-rather than 'programming languages'.  Thanks to
-[a notorious correspondence](https://en.wikipedia.org/wiki/Curry-Howard), we
-know that these two activities are really the same.  This kind of type systems
-are often said to have *dependent types*, since types, as we will see, can
-depend on values.
+are so expressive that they are often used as logical frameworks for mathematics
+rather than to write programs, and are thus often called 'theorem provers'
+rather than 'programming languages'.  Thanks to [a notorious
+correspondence](https://en.wikipedia.org/wiki/Curry-Howard), we know that these
+two activities are really the same [^itt].
+
+[^itt]: The roof of most of said systems is [Intuitionistic Type
+Theory](https://en.wikipedia.org/wiki/Intuitionistic_type_theory).
 
 [Agda](http://wiki.portal.chalmers.se/agda/pmwiki.php) is one of the most
-prominent systems of this kind at the moment.  Many functional programmers like
-it because it's has very 'functional' slant, trying to do everything with
-'simple' programming rather than recurring to mechanised transformation of terms
-(of which [Coq](http://coq.inria.fr/) is the most famous offender).  In this
-blog I will try to give some examples that will hopefully make you interested.
-In this first post we are going to write two sorting algorithms, and prove that
-they return a sorted list.  The implementation is taken from a
+prominent systems of this kind at the moment.  Many Haskell programmers like it
+because it's has very 'functional' slant, doing everything with 'pure'
+programming rather than recurring to mechanised transformation of terms (of
+which [Coq](http://coq.inria.fr/) is the most famous offender).  In this blog I
+will try to give some examples that will hopefully make you interested.  This
+first post explains how sorting algorithms can be proven correct.  The
+implementation follows a
 [presentation](https://personal.cis.strath.ac.uk/~conor/Pivotal.pdf) by Conor
-McBride, adapted for Agda.
+McBride.
 
 This is a literate Agda file---you should be able to paste it in a file called
-`AgdaSort.lagda` and you should be ready for type checking.  I'm not going to
-explain how to install agda here, you can refer to the
+`AgdaSort.lagda` and typecheck it.  I'm not going to explain how to install agda
+here, you can refer to the
 [wiki](http://wiki.portal.chalmers.se/agda/pmwiki.php) or the wonderful
-[freenode channel](irc://chat.freenode.net/haskell).
+[freenode channel](irc://chat.freenode.net/haskell).  While I go over all
+concepts presented I won't go in depth to keep things reasonably brief.  This is
+intended to get a taste of what Agda is capable of rather than explaining all
+its features.  If you want to read document meant to be an introduction, you can
+refer to the [many
+tutorials](http://wiki.portal.chalmers.se/agda/pmwiki.php?n=Main.Othertutorials)
+available---personally I recommend Ulf Norell's 'Dependently Typed Programming
+in Agda'.
+
+## Agda lists
 
 \begin{code}
 module AgdaSort where
 \end{code}
 
-## Agda lists
-
-Let's warm up by defining a data type dear to Haskell, a functional list:
+After the module declaration, let's warm up by defining a data type dear to
+Haskell, a functional list:
 
 \begin{code}
 infixr 5 _∷_
@@ -72,10 +81,12 @@ foldr f b (a ∷ as) = f a (foldr f b as)
 \end{code}
 
 Nothing surprising here, apart from the fact that we have to take the trouble of
-bringing the type variables into scope manually.  In Agda, things in curly
+bringing the type variables into scope manually.  In Agda, parameters in curly
 braces are implicit and the type checker will try to infer them by unification.
-Here we are also omitting the type of `A` by using `∀`---we can do this since
-`A` is an argument to `List` later in the signature.  For the converse reason we
+This procedure can fail---type inference is undecidable---in which case the
+implicits can be explicitly provided, also with curly braces.  Here we are also
+omitting the type of the parameter `A` by using `∀`---we can do this since `A`
+is an argument to `List` later in the signature.  For the converse reason we
 must provide a type for `B`.
 
 ## Sum and products
@@ -111,17 +122,9 @@ types more easily too.  The syntax is quite straightforward---we define a
 constructor `_,_` and fields accessors `fst` and `snd`.
 
 [^etalaws]: Most notably, the Agda typechecker will be able to use the η--law `x
-= fst x , snd x` if needed.
+= fst x , snd x` when deciding if two terms are equal.
 
-## `Unit` and `Empty`
-
-Now let's start doing something that we can't do in Haskell.  First we define
-a datatype with one inhabitant, much like `()` in Haskell:
-
-\begin{code}
-record Unit : Set where
-  constructor tt
-\end{code}
+## Unhabited types
 
 Now for a type with no inhabitants---no constructors:
 
@@ -149,15 +152,15 @@ undefined = undefined
 ```
 
 Agda makes sure that this is not possible [^consistent], thus keeping the system
-*consistent*.  This has very pleasant consequences, the heaviest being that all
-programs terminate.  For this reason consistent systems must be
+*consistent*.  This has very pleasant consequences, the most prominent being
+that all programs terminate.  For this reason consistent systems must be
 Turing--incomplete (we can't write an infinite loops!), and thus Agda lets us
 'step out' of these checks if we want to, although it is rarely needed---most
 algorithms we write are quite easily provably terminating.  Note that
-consistency was not put in Agda to please mathematicians (or not only anyway):
-given the expressivity of the type system type checking and evaluation are
-tightly intertwined, and thus we can send the compiler in an infinite loop if we
-can write one.
+consistency wasn't put in Agda only to please mathematicians: given the
+expressivity of the type system type checking and evaluation are tightly
+intertwined, and thus we can send the compiler in an infinite loop if we can
+write one.
 
 [^consistent]: Specifically:
     * Functions must be *structurally recursive*, where the arguments in the
@@ -174,18 +177,19 @@ infix 3 ¬_
 ¬ X = X → Empty
 \end{code}
 
-We would expect terms of type `¬ (3 > 4)` to exist.  Here it starts being clear
-that types are very 'first class' in Agda---functions can work on them as they
-do with ordinary values: in this case `¬` takes a type and forms another one.
+For example we would expect terms of type `¬ (3 > 4)` to exist.  Here it starts
+being clear that types are very 'first class' in Agda---functions can work on
+them as they do with ordinary values: in this case `¬` takes a type and forms
+another one.
 
 ## Different `Rel`ations
 
-We need one last ingredient before we can start sorting things.  We *could*
-write our sort for some specific data type, say integers, but why would we do
-that considering that we have a language that lets us express abstract
-structures in a really nice way?
+We need one last ingredient before we can start sorting.  We *could* write our
+sort for some specific data type, say integers, but why would we do that
+considering that we have a language that lets us express abstract structures
+very naturally?
 
-First we give a general definition of a binary relation on a type `X`:
+First we give a definition for a binary relation on a type `X`:
 
 \begin{code}
 Rel : Set → Set₁
@@ -193,12 +197,12 @@ Rel X = X → X → Set
 \end{code}
 
 The `Set₁` indicates that a relation between two `Set`s is 'larger' than a `Set`
-itself---this is nothing to worry about now but it follows a tradition in set
+itself---this is nothing to worry about now, but it follows a tradition in set
 theory that goes back to Russell to avoid paradoxes [^girards].  `Set` is in
-fact a shorthand for `Set₀` and represent the type of types of values: `Unit :
+fact a shorthand for `Set₀` and represent the type of types of values: `Empty :
 Set₀ : Set₁ : Set₂ : ...`.
 
-[^girards]: In type theory this is known as Hurkens' paradox, you can find an
+[^girards]: In type theory this is known as Girards' paradox, you can find an
 Agda (with `Set : Set` enabled) rendition
 [here](http://code.haskell.org/Agda/test/succeed/Hurkens.agda).
 
@@ -210,13 +214,13 @@ Decidable : ∀ {X} → Rel X → Set
 Decidable R = ∀ x y → Either (R x y) (¬ (R x y))
 \end{code}
 
-That is, a decidable relation is a function that tells us if `x` and `y` are
+That is, a decidable relation has a function that tells us if `x` and `y` are
 related or not.
 
 Now the interesting part.  To sort a list, we need two relations on the elements
-of the list: some notion of equality and some ordering on the elements.  More
-formally, the equality relation will be an *emph*
-[equivalence](https://en.wikipedia.org/wiki/Equivalence_relation):
+of the list: some notion of equality and some ordering on the elements (in fact
+the latter requires the former).  More formally, the equality will be an
+[equivalence relation](https://en.wikipedia.org/wiki/Equivalence_relation):
 
 \begin{code}
 record Equivalence {X : Set} (_≈_ : Rel X) : Set₁ where
@@ -240,11 +244,15 @@ record TotalOrder {X : Set} (_≈_ : Rel X) (_≤_ : Rel X) : Set₁ where
     equivalence : Equivalence _≈_
 \end{code}
 
+Records are often used to collect abstract properties over types, much like type
+classes are used in Haskell---only more flexible but without the big advantage
+of having automatic instance resolution.
+
 ## Sorting
 
-We can finally begin to sort.  To do this we will define a *module* parametrised
+We can finally begin to sort.  To do this we will define a module parametrised
 over a type and an ordering.  Agda has a very flexible module system---in fact
-we have already been using it by defining record, which are implicitly modules.
+we have already been using it by defining records, which are implicitly modules.
 
 \begin{code}
 module Sort {X : Set} {_≈_ _≤_ : Rel X}
@@ -255,11 +263,11 @@ module Sort {X : Set} {_≈_ _≤_ : Rel X}
 \end{code}
 
 We require both relations to be decidable, and we bring in scope some fields of
-the records using `open`.
+the records using `open`, so that we can use them directly.
 
 ### Insertion sort
 
-We want to represent bounded lists, but we want the bounds to be possible
+We want to represent bounded lists, but we want the bounds to be possibly
 'open'.  For this purpose we wrap our type `X` in a data type that contains a
 'top' and 'bottom' elements, that are respectively greater or equal and lower or
 equal than all the other elements.
@@ -270,17 +278,25 @@ equal than all the other elements.
     ⟦_⟧ : X → ⊥X⊤
 \end{code}
 
-For `⊥X⊤` to be useful, we lift our ordering to work with it:
+For `⊥X⊤` to be useful, we lift our ordering to work with it, following our
+consideration for the top and bottom elements of `⊥X⊤`:
 
 \begin{code}
-  _≤̂_ : ⊥X⊤ → ⊥X⊤ → Set
-  ⊥     ≤̂ _     = Unit
-  ⟦ n ⟧ ≤̂ ⟦ m ⟧ = n ≤ m
-  _     ≤̂ ⊤     = Unit
-  _     ≤̂ _     = Empty
+  data _≤̂_ : ⊥X⊤ → ⊥X⊤ → Set where
+    ⊥≤̂ : ∀ {x} → ⊥ ≤̂ x
+    ≤̂⊤ : ∀ {x} → x ≤̂ ⊤
+    x≤̂y : ∀ {x y} → x ≤ y → ⟦ x ⟧ ≤̂ ⟦ y ⟧
 \end{code}
 
-...and a 'sandwiching' relation:
+Note that this data type is different from what we have defined before: the
+parameters to the type constructor can vary between data constructors---much
+like in GADTs in Haskell.  In Agda, 'changing' parameters are known as
+*indices*, as opposed to non--changing *parameters*.  Parameters are named and
+to the left of the colon, while the type to the right of the colon will
+determine the number and type of indices---in this case two `⊥X⊤`s.  This kind
+of data type is known as an *inductive family*.
+
+A 'sandwiching' relation will also be handy:
 
 \begin{code}
   _≤_≤_ : ⊥X⊤ → X → ⊥X⊤ → Set
@@ -298,6 +314,8 @@ We can now define the type of bounded, ordered lists:
 `nil` will work with any bounds, provided that the lower `l` is less or equal
 than the upper `u`.  `cons` will cons an element `x` to a list with `x` as a
 lower bound, and return a list with lower bound `l`, provided that `l ≤ x ≤ u`.
+It's clear from how `cons` work that the elements in `OList` will be ordered
+according to the `≤` relation.
 
 We can easily get a 'normal' list back from an `OList`:
 
@@ -310,7 +328,7 @@ We can easily get a 'normal' list back from an `OList`:
 With the right data types, writing and proving correct [^sortcorrect] an
 [insertion sort](https://en.wikipedia.org/wiki/Insertion_sort) is a breeze---I
 encourage you to try and writing yourself checking the goals as you pattern
-match, the only non--trivial case is the last one:
+match, the only non--trivial case being the last one:
 
 [^sortcorrect]: Some might complain that actually we are only proving half of
 the story, since we need to guarantee that the result list is a permutation of
@@ -320,24 +338,21 @@ more involved.  What is very easy is to prove that length is preserved, see
 a version of this article which does exactly that.
 
 \begin{code}
-  insert : ∀ {l u} → (x : X) (xs : OList l u) {l≤x≤u : l ≤ x ≤ u} →
-           OList l u
-  insert y (nil _) {l≤y , y≤u} = cons y (nil y≤u) (l≤y , y≤u)
-  insert y (cons x xs (l≤x , x≤u)) with y ≤? x
-  insert y (cons x xs (l≤x , x≤u)) {l≤y , y≤u} | left  y≤x =
-    cons y (cons x xs (y≤x , x≤u)) (l≤y , y≤u)
-  insert y (cons x xs (l≤x , x≤u)) {l≤y , y≤u} | right y>x =
-    cons x (insert x xs {reflexive refl , x≤u}) (l≤x , x≤u)
+  insert : ∀ {l u} → (x : X) (xs : OList l u) → l ≤ x ≤ u → OList l u
+  insert y (nil _)                 (l≤y , y≤u) = cons y (nil y≤u) (l≤y , y≤u)
+  insert y (cons x xs (l≤x , x≤u)) _           with y ≤? x
+  insert y (cons x xs (l≤x , x≤u)) (l≤y , y≤u) | left  y≤x =
+    cons y (cons x xs (x≤̂y y≤x , x≤u)) (l≤y , y≤u)
+  insert y (cons x xs (l≤x , x≤u)) (l≤y , y≤u) | right y>x =
+    cons x (insert x xs (x≤̂y (reflexive refl) , x≤u)) (l≤x , x≤u)
 \end{code}
 
-Insertion sort is just a fold [^etafun]:
-
-[^etafun]: The pointless amongst you will be horrified by the `λ x xs → insert x
-xs`---however we need it, due to how implicit parameters work in Agda.
+Insertion sort is just a fold, where we use the type `OList ⊥ ⊤` to represent a
+sorted list with 'open' bounds:
 
 \begin{code}
   isort′ : List X → OList ⊥ ⊤
-  isort′ = foldr (λ x xs → insert x xs) (nil _)
+  isort′ = foldr (λ x xs → insert x xs (⊥≤̂ , ≤̂⊤)) (nil ⊥≤̂)
 
   isort : List X → List X
   isort xs = toList (isort′ xs)
@@ -357,13 +372,13 @@ The technique is similar to that employed in `OList`.  Then we need a procedure
 to insert an element in an existing tree:
 
 \begin{code}
-  newLeaf : ∀ {l u} → (x : X) → Tree l u → {l≤x≤u : l ≤ x ≤ u} → Tree l u
-  newLeaf x (leaf _) {l≤x , x≤u} = node x (leaf l≤x) (leaf x≤u)
-  newLeaf x (node y ly yu) with x ≤? y
-  newLeaf x (node y ly yu) {l≤x , x≤u} | left x≤y =
-    node y (newLeaf x ly {l≤x , x≤y}) yu
-  newLeaf x (node y ly yu) {l≤x , x≤u} | right x>y  =
-    node y ly (newLeaf x yu {[ (λ p → absurd (x>y p)) , (λ p → p) ] (total x y) , x≤u})
+  newLeaf : ∀ {l u} → (x : X) → Tree l u → l ≤ x ≤ u → Tree l u
+  newLeaf x (leaf _)       (l≤x , x≤u) = node x (leaf l≤x) (leaf x≤u)
+  newLeaf x (node y ly yu) _           with x ≤? y
+  newLeaf x (node y ly yu) (l≤x , x≤u) | left x≤y =
+    node y (newLeaf x ly (l≤x , x≤̂y x≤y)) yu
+  newLeaf x (node y ly yu) (l≤x , x≤u) | right x>y  =
+    node y ly (newLeaf x yu ([ (λ x≤y → absurd (x>y x≤y)) , x≤̂y ] (total x y) , x≤u))
 \end{code}
 
 Again, the only tricky bit is the last one, where we need to convince Agda that
@@ -373,30 +388,36 @@ Similar to `isort′`, turning a `List` into a `Tree` is a simple fold:
 
 \begin{code}
   fromList : List X → Tree ⊥ ⊤
-  fromList = foldr (λ x xs → newLeaf x xs) (leaf _)
+  fromList = foldr (λ x xs → newLeaf x xs (⊥≤̂ , ≤̂⊤)) (leaf ⊥≤̂)
 \end{code}
 
 Now we need to 'flatten' a `Tree` into an `OList`.  To do that we need a few
-additional lemmas---first, transitivity for the lifted ordering, which is boring
-but easy:
+additional lemmas---first, transitivity for the lifted ordering:
 
 \begin{code}
-  ≤̂-trans : ∀ l x u → l ≤̂ ⟦ x ⟧ → ⟦ x ⟧ ≤̂ u → l ≤̂ u
-  ≤̂-trans ⊤     _ ⊤     _   _   = _
-  ≤̂-trans ⊤     _ ⊥     _   ()
-  ≤̂-trans ⊤     _ ⟦ _ ⟧ ()  _  
-  ≤̂-trans ⊥     _ _     _   _   = _
-  ≤̂-trans ⟦ _ ⟧ _ ⊤     _   _   = _
-  ≤̂-trans ⟦ _ ⟧ _ ⊥     _   ()
-  ≤̂-trans ⟦ l ⟧ x ⟦ u ⟧ l≤x x≤u = trans l≤x x≤u
+  ≤̂-trans : ∀ {l x u} → l ≤̂ x → x ≤̂ u → l ≤̂ u
+  ≤̂-trans ⊥≤̂        _         = ⊥≤̂
+  ≤̂-trans _         ≤̂⊤        = ≤̂⊤
+  ≤̂-trans (x≤̂y l≤x) (x≤̂y x≤u) = x≤̂y (trans l≤x x≤u)
 \end{code}
 
-Then, something that shows that the bounds of an ordered list are ordered correctly:
+Here we use pattern matching in a new way: since the value of the indices of `≤̂`
+depends on the constructors, matching on a constructor refines the context with
+the new information.  For example in the first case pattern matching `⊥≤̂` turns
+all occurrences of `l` into `⊥` in the respective context.  Pattern matching is
+a much more powerful notion in Agda that is in in most (even dependently typed)
+programming languages---it can not only change the context, but it will also
+constraint the possible constructors of other parameters, if they are of a type
+with indices and those indices have been refined.  This collection of techniques
+are known as 'dependent pattern matching'.
+
+Then, something that shows that the bounds of an ordered list are ordered
+correctly:
 
 \begin{code}
   OList-≤ : ∀ {l u} → OList l u → l ≤̂ u
-  OList-≤ (nil l≤u) = l≤u
-  OList-≤ {l} {u} (cons x xu (l≤x , x≤u)) = ≤̂-trans l x u l≤x (OList-≤ xu)
+  OList-≤ (nil l≤u)               = l≤u
+  OList-≤ (cons x xu (l≤x , x≤u)) = ≤̂-trans l≤x (OList-≤ xu)
 \end{code}
 
 Now we can define `OList` concatenation, with the twist of inserting a new
@@ -406,9 +427,10 @@ element in the middle; and finally `flatten`:
   _⇒_++_ : ∀ {l u} → (x : X) → OList l ⟦ x ⟧ → OList ⟦ x ⟧ u → OList l u
   x ⇒ nil l≤u               ++ xu = cons x xu (l≤u , OList-≤ xu)
   x ⇒ cons y yx (l≤y , y≤x) ++ xu =
-    cons y (x ⇒ yx ++ xu) (l≤y , ≤̂-trans ⟦ y ⟧ x _ y≤x (OList-≤ xu))
+    cons y (x ⇒ yx ++ xu) (l≤y , ≤̂-trans y≤x (OList-≤ xu))
+
   flatten : ∀ {l u} → Tree l u → OList l u
-  flatten (leaf l≤u) = (nil l≤u)
+  flatten (leaf l≤u)     = (nil l≤u)
   flatten (node x lx xu) =  x ⇒ flatten lx ++ flatten xu
 \end{code}
 
@@ -416,36 +438,65 @@ Then we are good with yet another fold.
 
 \begin{code}
   treeSort′ : List X → OList ⊥ ⊤
-  treeSort′ xs = flatten (foldr (λ x xs → newLeaf x xs) (leaf _) xs)
+  treeSort′ xs = flatten (foldr (λ x xs → newLeaf x xs (⊥≤̂ , ≤̂⊤)) (leaf ⊥≤̂) xs)
 
   treeSort : List X → List X
   treeSort xs = toList (treeSort′ xs)
 \end{code}
 
-Once 
+## Propositional equality
 
---------------------------------------------------------------------------------
--- Propositional equality
+Now lets put our module to work.  We will need a type equipped with the
+appropriate relations, in this post I am going to use natural numbers.
 
+For what concerns equality, we can actually define an inductive family that
+relates equal terms:
+
+\begin{code}
 module PropositionalEquality where
   data _≡_ {X : Set} : Rel X where
     refl : ∀ {x} → x ≡ x
+\end{code}
 
+It's worth mentioned what 'equal' means here.  I have mentioned earlier that
+'evaluation and typechecking are intertwined': when the type checker has to
+decide if two types, or more generally two terms, are 'the same', it simply
+reduces them as far as possible (to their 'normal form') and then compares them
+syntactically.  Remember, every Agda term is terminating, so this procedure
+itself is guaranteed to terminate.  Thus, `refl : ((λ x → x) 1) ≡ 1` is
+acceptable, and so on.
+
+This notion of equality is often called 'definitional' equality, as opposed to
+the user--level equality expressed by the inductive family we have just defined,
+which takes the name of 'propositional equality'.  Note that propositional
+equality *does not* imply definitional equality, unless the prop. equality is a
+closed term.  In the general case we might have prop. equalities in scope that
+do not necessarily hold or involve abstracted variables, think of `λ (p : 3 ≡ 1)
+→ ...`.
+
+Let's prove that `≡` is an equivalent relation, and a `cong`ruence law which
+will be useful later:
+
+\begin{code}
   sym : ∀ {X} {x y : X} → x ≡ y → y ≡ x
   sym refl = refl
 
   trans : ∀ {X} {x y z : X} → x ≡ y → y ≡ z → x ≡ z
   trans refl refl = refl
 
-  cong : ∀ {X} {x y : X} → (f : X → X) → x ≡ y → f x ≡ f y
-  cong _ refl = refl
-
   equivalence : ∀ {X} → Equivalence {X} _≡_
   equivalence = record { refl = refl; sym = sym; trans = trans }
 
---------------------------------------------------------------------------------
--- Natural numbers
+  cong : ∀ {X} {x y : X} → (f : X → X) → x ≡ y → f x ≡ f y
+  cong _ refl = refl
+\end{code}
 
+All the definitions above rely on the dependent pattern matching mentioned
+before.
+
+## Natural numbers
+
+\begin{code}
 module Nat where
   data ℕ : Set where
     zero : ℕ
@@ -454,11 +505,14 @@ module Nat where
   {-# BUILTIN NATURAL ℕ    #-}
   {-# BUILTIN ZERO    zero #-}
   {-# BUILTIN SUC     suc  #-}
+\end{code}
 
-  _+_ : ℕ → ℕ → ℕ
-  zero  + y = y
-  suc x + y = suc (x + y)
+The definition for naturals is the usual one---the pragmas are there so that we
+can use number literals.
 
+Then we define a procedure to decide equality for naturals:
+
+\begin{code}
   open PropositionalEquality using (_≡_; refl; cong; equivalence)
 
   ≡-suc : ∀ {x y} → suc x ≡ suc y → x ≡ y
@@ -471,7 +525,9 @@ module Nat where
   suc x ≟ suc y with x ≟ y
   ... | left  x≡y = left  (cong suc x≡y)
   ... | right x≢y = right (λ sx≡sy → x≢y (≡-suc sx≡sy))
+\end{code}
 
+\begin{code}
   data _≤_ : Rel ℕ where
     z≤n : ∀ {n}   → zero ≤ n
     s≤s : ∀ {m n} → m ≤ n → suc m ≤ suc n
