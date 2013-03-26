@@ -118,6 +118,17 @@ p {
     font-family: Georgia, serif;
 }
 
+blockquote {
+    background: #f0f0f0;
+    border-left: 5px solid #7F1315;
+    margin: 0.5em 0.3em 0.3em 1.5em;
+    padding: 0.5em 0.7em;
+}
+
+blockquote p {
+    text-indent: 0;
+}
+
 #article h3 {
     font-size:1.3em;
     font-weight:bold;
