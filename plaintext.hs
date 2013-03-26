@@ -1,8 +1,8 @@
 import Text.Pandoc
 
 autoLink :: Inline -> Inline
-autoLink (Link ils tg) = Link [Code nullAttr (concat [s | Str s <- ils])] tg
-autoLink il            = il
+autoLink (Link ils _) = RawInline "html" ("<" ++ concat [s | Str s <- ils] ++ ">")
+autoLink il           = il
 
 strongToEmph :: Inline -> Inline
 strongToEmph (Strong ils) = Emph ils

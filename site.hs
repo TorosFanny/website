@@ -42,11 +42,9 @@ main =
        -- RSS and Atom
        create ["atom.xml"] $ renderFeed renderAtom
        create ["rss.xml"]  $ renderFeed renderRss
-       -- -- CV
-       -- match "cv.htm" $
-       --     do route idRoute
-       --        compile $ getResourceBody >>= relativiseUrls
 
+       -- CV
+       match "cv/*" $ do route idRoute; compile copyFileCompiler
 
 postCtx :: Context String
 postCtx = dateField "date" "%B %e, %Y" <> defaultContext
