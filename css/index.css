@@ -1,0 +1,38 @@
+body {
+    max-width: 1060px;
+    margin: 30px;
+    background-color: black;
+    background-image: url('../images/home_bg.jpg');
+    background-repeat:no-repeat;
+    background-position:left top;
+    color: black;
+    font-family: Georgia, serif;
+}
+
+a {
+    color: black;
+}
+
+a:visited {
+    color: black;
+}
+
+div {
+    width: 100%;
+    margin: 0;
+}
+
+p {
+    background-color: rgba(255,255,255,0.8);
+    padding: 0.8em 1em;
+    margin: 0.2em 0;
+    width: 70%;
+    float: left;
+}
+
+.side {
+    float: left;
+    background-color: rgba(255,255,255,0.8);
+    width: 25%;
+    margin: 0.2em 0 0 0.5em;
+}

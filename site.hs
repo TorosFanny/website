@@ -17,7 +17,7 @@ main =
                         loadAndApplyTemplate "templates/default.html" postCtx >>=
                         relativizeUrls
 
-       create ["index.html"] $
+       create ["archive.html"] $
            do route idRoute
               compile $
                   let archiveCtx = field "posts" (\_ -> postList recentFirst) <>
@@ -29,6 +29,10 @@ main =
                      relativizeUrls
 
        match "templates/*" $ compile templateCompiler
+
+       match "index.html" $
+           do route idRoute
+              compile $ getResourceBody >>= relativizeUrls
 
 postCtx :: Context String
 postCtx = dateField "date" "%B %e, %Y" <> defaultContext
