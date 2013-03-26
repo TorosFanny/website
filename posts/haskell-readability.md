@@ -4,13 +4,13 @@ date: 2012-02-27
 ---
 
 This weekend on [/r/programming](http://www.reddit.com/r/programming) someone
-posted a
-[nice introduction](http://v1v3kn.tumblr.com/post/18238156967/roll-your-own-autocomplete-solution-using-tries)
-to tries using Python. A while ago, I had implemented a
-[mini web server](https://github.com/bitonic/suggest) to do completion and
-correction of words using Ternary Search Tries in Haskell, and since the trie
-post generated a lot of interest I decided to
-[post it](http://www.reddit.com/r/programming/comments/q5dz2/roll_your_own_fast_completion_and_correction/).
+posted a [nice
+introduction](http://v1v3kn.tumblr.com/post/18238156967/roll-your-own-autocomplete-solution-using-tries)
+to tries using Python. A while ago, I had implemented a [mini web
+server](https://github.com/bitonic/suggest) to do completion and correction of
+words using Ternary Search Tries in Haskell, and since the trie post generated a
+lot of interest I decided to [post mine
+too](http://www.reddit.com/r/programming/comments/q5dz2/roll_your_own_fast_completion_and_correction/).
 
 Then, someone else posted a
 [blog article](http://www.reddit.com/r/programming/comments/q5dz2/roll_your_own_fast_completion_and_correction/c3v6ruo)
