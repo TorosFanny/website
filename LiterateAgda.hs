@@ -1,72 +1,28 @@
-module LiterateAgda where
+module LiterateAgda (markdownAgda) where
 
-
-import Control.Monad.State
-import Control.Monad.Error
-import Control.Applicative
-
-import Data.List
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Maybe
 import Data.Function
+import Data.List
+import Data.Maybe
 import Data.Monoid
 
-import System.Environment
+import Control.Applicative
+import Control.Monad.Error
+import Control.Monad.State
+import qualified Data.Map as Map
 import System.Exit
-import System.FilePath
 import Text.XHtml.Strict
 
-import Agda.Syntax.Position hiding (Range)
-import Agda.Syntax.Parser
-import Agda.Syntax.Concrete.Pretty ()
-import Agda.Syntax.Concrete.Name (TopLevelModuleName)
-import qualified Agda.Syntax.Abstract as A
-import Agda.Syntax.Abstract.Pretty
-import Agda.Syntax.Translation.ConcreteToAbstract
-import Agda.Syntax.Translation.AbstractToConcrete
-import Agda.Syntax.Translation.InternalToAbstract
-import Agda.Syntax.Abstract.Name hiding (Name)
-import Agda.Syntax.Scope.Base
-import Agda.Syntax.Common
-
-
-import Agda.Interaction.Exceptions
-import Agda.Interaction.CommandLine.CommandLine
-import Agda.Interaction.Options
-import Agda.Interaction.Monad
-import Agda.Interaction.GhcTop (mimicGHCi)
-import Agda.Interaction.Highlighting.Generate
 import Agda.Interaction.Highlighting.Precise
-import Agda.Interaction.Highlighting.Range
 import qualified Agda.Interaction.Imports as Imp
-import qualified Agda.Interaction.Highlighting.Dot as Dot
-import qualified Agda.Interaction.Highlighting.LaTeX as LaTeX
-import Agda.Interaction.Highlighting.HTML
-
-import Agda.TypeChecker
-import Agda.TypeChecking.Monad hiding (MetaInfo, Constructor)
-import Agda.TypeChecking.Reduce
+import Agda.Interaction.Options
+import Agda.Syntax.Abstract.Name (toTopLevelModuleName)
+import Agda.Syntax.Common
+import Agda.Syntax.Concrete.Name (TopLevelModuleName)
+import Agda.Syntax.Concrete.Pretty ()
 import Agda.TypeChecking.Errors
-import qualified Agda.TypeChecking.Serialise
-import Agda.TypeChecking.Serialise
-import Agda.TypeChecking.SizedTypes
-
-import Agda.Compiler.MAlonzo.Compiler as MAlonzo
-import Agda.Compiler.Epic.Compiler as Epic
-import Agda.Compiler.JS.Compiler as JS
-
-import Agda.Termination.TermCheck
-
-import Agda.Utils.Monad
+import Agda.TypeChecking.Monad hiding (MetaInfo, Constructor)
 import Agda.Utils.FileName
-import Agda.Utils.Pretty
 import qualified Agda.Utils.IO.UTF8 as UTF8
-
-import Agda.Tests
-import Agda.Version
-
-import qualified System.IO as IO
 
 checkFile :: AbsolutePath -> TCM TopLevelModuleName
 checkFile file = do resetState
@@ -172,8 +128,8 @@ convert m =
     do (info, contents) <- getModule m
        return . toMarkdown m . groupLiterate . pairPositions info $ contents
 
-htmlAgda :: CommandLineOptions -> FilePath -> IO String
-htmlAgda opts fp =
+markdownAgda :: CommandLineOptions -> FilePath -> IO String
+markdownAgda opts fp =
     do r <- runTCM $ catchError (setCommandLineOptions opts >>
                                  checkFile (mkAbsolute fp) >>= convert)
                    $ \err -> do s <- prettyError err
