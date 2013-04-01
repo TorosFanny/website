@@ -32,8 +32,9 @@ can be proven correct.  The implementation is largely inspired from a
 McBride.
 
 This blog post was generated from a literate Agda file, that you can find
-[here](TODO).  I'm not going to explain how to install Agda here, you can refer
-to the [wiki](http://wiki.portal.chalmers.se/agda/pmwiki.php) or the wonderful
+[here](TODO).  You should also be able to just copy paste and compile.  I'm not
+going to explain how to install Agda here, you can refer to the
+[wiki](http://wiki.portal.chalmers.se/agda/pmwiki.php) or the wonderful
 [freenode channel](irc://chat.freenode.net/agda).  While I go over all concepts
 presented I won't go in depth to keep things reasonably brief: this is intended
 to get a taste of what Agda is capable of rather than explaining all its
