@@ -16,24 +16,23 @@ rather than 'programming languages'.  Thanks to [a notorious
 correspondence](https://en.wikipedia.org/wiki/Curry-Howard), we know that these
 two activities are really the same [^itt].
 
-[^itt]: The logical core of most of said systems is an
+[^itt]: For the interested, the logical core of most of said systems is an
 [intensional](https://en.wikipedia.org/wiki/Intuitionistic_type_theory#Extensional_versus_intensional)
 [Intuitionistic Type
 Theory](https://en.wikipedia.org/wiki/Intuitionistic_type_theory).
 
 [Agda](http://wiki.portal.chalmers.se/agda/pmwiki.php) is one of the most
 prominent systems of this kind at the moment.  Many Haskell programmers like it
-because it's has very 'functional' slant, doing everything with 'pure'
-programming rather than recurring to mechanised transformation of terms (of
-which [Coq](http://coq.inria.fr/) is the most famous offender).  In this blog I
-will try to give some examples that will hopefully make you interested.  This
-first post explains how sorting algorithms can be proven correct.  The
-implementation follows a
+because it's has very 'functional' slant, doing everything without recurring to
+mechanised transformation of terms (of which [Coq](http://coq.inria.fr/) is the
+most famous offender).  In this blog I will try to give some examples that will
+hopefully make you interested.  This first post explains how sorting algorithms
+can be proven correct.  The implementation is largely inspired from a
 [presentation](https://personal.cis.strath.ac.uk/~conor/Pivotal.pdf) by Conor
 McBride.
 
 This blog post was generated from a literate Agda file, that you can find
-[here](TODO).  I'm not going to explain how to install agda here, you can refer
+[here](TODO).  I'm not going to explain how to install Agda here, you can refer
 to the [wiki](http://wiki.portal.chalmers.se/agda/pmwiki.php) or the wonderful
 [freenode channel](irc://chat.freenode.net/agda).  While I go over all concepts
 presented I won't go in depth to keep things reasonably brief: this is intended
@@ -43,6 +42,8 @@ introduction, you can refer to the [many
 tutorials](http://wiki.portal.chalmers.se/agda/pmwiki.php?n=Main.Othertutorials)
 available---personally I recommend Ulf Norell's 'Dependently Typed Programming
 in Agda'.
+
+Let's get started!
 
 ## Good old `List`s
 
@@ -65,13 +66,14 @@ The syntax to declare this type resembles the syntax for
 parametrised type---what Agda calls `Set` is more or less what Haskell calls
 `*`, the type of types, or 'kind' in Haskell parlance.  `List` is a type
 constructor which takes a type and 'returns' a new type, `List : Set → Set`,
-much like Haskell's `[] : * → *`.
+much like Haskell's `[] :: * → *`.
 
 Then we have two constructors, `[]` for an empty list and `_∷_` to cons an
 element to an existing list.  Agda gives us great flexibility in the syntax:
-arbitrary operators can defined where `_` indicates an argument.  In this case
-`_∷_` is a binary operator.  The fixity declaration is similar to what we would
-find in Haskell.
+arbitrary operators can defined where `_` indicates an argument, and identifiers
+are not limited to the usual mix of alphanumeric characters plus a couple of
+symbols.  In this case `_∷_` is a binary operator.  The fixity declaration is
+similar to what we would find in Haskell.
 
 Let's define `foldr`:
 
@@ -605,4 +607,3 @@ Finally, we can import the sorting functions.  We're done!
 \begin{code}
   open Sort _≟_ _≤?_ totalOrder using (isort; treeSort)
 \end{code}
-
