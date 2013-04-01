@@ -80,20 +80,17 @@ groupLiterate = begin
     notCode :: (String -> MetaInfo -> Bool) -> (Integer, String, MetaInfo) -> Bool
     notCode f (_, s, mi) = not (f s mi)
 
-annotate :: TopLevelModuleName -> Integer -> MetaInfo -> Html -> Html
-annotate m pos mi = anchor ! attributes
+annotate :: String -> TopLevelModuleName -> Integer -> MetaInfo -> Html -> Html
+annotate classpr m pos mi = anchor ! attributes
   where
-    attributes =
-        [name (show pos)] ++
-        fromMaybe [] (definitionSite mi >>= link) ++
-        (case classes of
-          [] -> []
-          cs -> [theclass $ unwords cs])
+    attributes = [name (show pos)] ++
+                 fromMaybe [] (definitionSite mi >>= link) ++
+                 (case classes of [] -> []; cs -> [theclass $ unwords cs])
 
-    classes =
-        maybe [] noteClasses (note mi)
-        ++ otherAspectClasses (otherAspects mi)
-        ++ maybe [] aspectClasses (aspect mi)
+    classes = map (classpr ++) $
+              maybe [] noteClasses (note mi) ++
+              otherAspectClasses (otherAspects mi) ++
+              maybe [] aspectClasses (aspect mi)
 
     aspectClasses (Name mKind op) =
         let kindClass = maybe [] ((: []) . showKind) mKind
@@ -113,25 +110,26 @@ annotate m pos mi = anchor ! attributes
 
     link (m', pos') = if m == m' then Just [href $ "#" ++ show pos'] else Nothing
 
-toMarkdown :: TopLevelModuleName -> [Either String [(Integer, String, MetaInfo)]]
-          -> String
-toMarkdown m contents =
+toMarkdown :: String
+           -> TopLevelModuleName -> [Either String [(Integer, String, MetaInfo)]]
+           -> String
+toMarkdown classpr m contents =
     concat [ case c of
                   Left s   -> s
-                  Right cs ->
-                      renderHtmlFragment . pre . mconcat $
-                      [(annotate m pos mi (stringToHtml s)) | (pos, s, mi) <- cs]
+                  Right cs -> renderHtmlFragment . pre . mconcat $
+                              [ (annotate classpr m pos mi (stringToHtml s))
+                              | (pos, s, mi) <- cs ]
            | c <- contents ]
 
-convert :: TopLevelModuleName -> TCM String
-convert m =
+convert :: String -> TopLevelModuleName -> TCM String
+convert classpr m =
     do (info, contents) <- getModule m
-       return . toMarkdown m . groupLiterate . pairPositions info $ contents
+       return . toMarkdown classpr m . groupLiterate . pairPositions info $ contents
 
-markdownAgda :: CommandLineOptions -> FilePath -> IO String
-markdownAgda opts fp =
+markdownAgda :: CommandLineOptions -> String -> FilePath -> IO String
+markdownAgda opts classpr fp =
     do r <- runTCM $ catchError (setCommandLineOptions opts >>
-                                 checkFile (mkAbsolute fp) >>= convert)
+                                 checkFile (mkAbsolute fp) >>= convert classpr)
                    $ \err -> do s <- prettyError err
                                 liftIO (putStrLn s)
                                 throwError err
