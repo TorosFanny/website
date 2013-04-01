@@ -1,27 +1,27 @@
 module LiterateAgda (markdownAgda) where
 
-import Data.Function
-import Data.List
-import Data.Maybe
-import Data.Monoid
+import           Control.Applicative
+import           Data.Function
+import           Data.List
+import           Data.Maybe
+import           Data.Monoid
 
-import Control.Applicative
-import Control.Monad.Error
-import Control.Monad.State
+import           Control.Monad.Error
+import           Control.Monad.State
 import qualified Data.Map as Map
-import System.Exit
-import Text.XHtml.Strict
+import           System.Exit
+import           Text.XHtml.Strict
 
-import Agda.Interaction.Highlighting.Precise
+import           Agda.Interaction.Highlighting.Precise
 import qualified Agda.Interaction.Imports as Imp
-import Agda.Interaction.Options
-import Agda.Syntax.Abstract.Name (toTopLevelModuleName)
-import Agda.Syntax.Common
-import Agda.Syntax.Concrete.Name (TopLevelModuleName)
-import Agda.Syntax.Concrete.Pretty ()
-import Agda.TypeChecking.Errors
-import Agda.TypeChecking.Monad hiding (MetaInfo, Constructor)
-import Agda.Utils.FileName
+import           Agda.Interaction.Options
+import           Agda.Syntax.Abstract.Name (toTopLevelModuleName)
+import           Agda.Syntax.Common
+import           Agda.Syntax.Concrete.Name (TopLevelModuleName)
+import           Agda.Syntax.Concrete.Pretty ()
+import           Agda.TypeChecking.Errors
+import           Agda.TypeChecking.Monad hiding (MetaInfo, Constructor)
+import           Agda.Utils.FileName
 import qualified Agda.Utils.IO.UTF8 as UTF8
 
 checkFile :: AbsolutePath -> TCM TopLevelModuleName
@@ -80,6 +80,7 @@ groupLiterate = begin
     notCode :: (String -> MetaInfo -> Bool) -> (Integer, String, MetaInfo) -> Bool
     notCode f (_, s, mi) = not (f s mi)
 
+-- Ripped off Agda.Interaction.Highlighting.HTML
 annotate :: TopLevelModuleName -> Integer -> MetaInfo -> Html -> Html
 annotate m pos mi = anchor ! attributes
   where
