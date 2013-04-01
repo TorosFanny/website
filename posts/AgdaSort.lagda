@@ -95,7 +95,7 @@ signature.  For the converse reason we must provide a type for `B`.
 
 ## Sum and products
 
-Now another 'boring' type, 'Either', plus the associated destructor ('either' in
+Now another 'boring' type, `Either`, plus the associated destructor (`either` in
 Haskell):
 
 \begin{code}
