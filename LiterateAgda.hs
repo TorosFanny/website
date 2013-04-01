@@ -6,7 +6,6 @@ module LiterateAgda
 
 import           Control.Applicative
 import           Data.Char
-import           Data.Data (Data)
 import           Data.Function
 import           Data.List
 import           Data.Maybe
@@ -26,7 +25,6 @@ import           Agda.Interaction.Options
 import           Agda.Syntax.Abstract.Name (toTopLevelModuleName)
 import           Agda.Syntax.Common
 import           Agda.Syntax.Concrete.Name (TopLevelModuleName)
-import           Agda.Syntax.Concrete.Pretty ()
 import           Agda.TypeChecking.Errors
 import           Agda.TypeChecking.Monad hiding (MetaInfo, Constructor)
 import           Agda.Utils.FileName
@@ -35,7 +33,6 @@ import           Hakyll.Core.Compiler
 import           Hakyll.Core.Identifier
 import           Hakyll.Core.Item
 import           Hakyll.Web.Pandoc
-import           Hakyll.Web.Pandoc.FileType
 import           Text.Pandoc
 
 checkFile :: AbsolutePath -> TCM TopLevelModuleName
@@ -156,7 +153,7 @@ markdownAgda opts classpr fp =
        -- TODO try to skip the interface instead of just deleting it
        removeFile (replaceExtension fp "agdai")
        case r of
-           Right s -> return s
+           Right s -> return (dropWhile isSpace s)
            Left _  -> exitFailure
 
 isAgda :: Item a -> Bool

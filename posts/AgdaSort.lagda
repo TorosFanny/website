@@ -483,11 +483,11 @@ to terminate.  Thus, `refl : ((λ x → x) 1) ≡ 1` is acceptable, and so on.
 
 This notion of equality is often called 'definitional' equality, as opposed to
 the user-level equality expressed by the inductive family we have just defined,
-which takes the name of 'propositional equality'.  Note that propositional
-equality *does not* imply definitional equality, unless the prop. equality is a
-closed term[^setoid].  In the general case we might have prop. equalities in
-scope that do not necessarily hold or involve abstracted variables, think of `λ
-(p : 3 ≡ 1) → ...`.
+which takes the name of 'propositional equality'.  Note that having a
+prop. equality in scope *does not* imply definitional equality for the related
+terms, unless the prop. equality is a closed term[^setoid].  In the general case
+we might have prop. equalities in scope that do not necessarily hold or involve
+abstracted variables, think of `λ (p : 3 ≡ 1) → ...`.
 
 [^setoid]: This is the reason why we did not just use `≡` from the beginning and
 we instead chose to parametrise our equality relation: sometimes propositional
@@ -512,7 +512,7 @@ will be useful later:
 
 All the definitions above rely on the dependent pattern matching mentioned
 before---we *need* to pattern match for the body to work, otherwise the type
-checker does not know that the terms on each side of the `≡' are definitionally
+checker does not know that the terms on each side of the `≡` are definitionally
 equal.
 
 ## Natural numbers

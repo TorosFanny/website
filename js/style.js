@@ -4,7 +4,7 @@ var shadowHeight = 6;
 var effects = [colorsTrans, colorsRun, colorsBlink, shadowColor];
 
 $(document).ready(function() {
-    getEffect()($("#title"));
+    getEffect()($("#logo"));
 });
 
 function getEffect() {
