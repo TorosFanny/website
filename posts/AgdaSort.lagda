@@ -14,7 +14,7 @@ are so expressive that they are often used as logical frameworks for mathematics
 rather than to write programs, and are thus often called 'theorem provers'
 rather than 'programming languages'.  Thanks to [a notorious
 correspondence](https://en.wikipedia.org/wiki/Curry-Howard), we know that these
-two activities are really the same [^itt].
+two activities are really the same[^itt].
 
 [^itt]: For the interested, the logical core of most of said systems is an
 [intensional](https://en.wikipedia.org/wiki/Intuitionistic_type_theory#Extensional_versus_intensional)
@@ -121,7 +121,7 @@ record _∧_ (A B : Set) : Set where
 \end{code}
 
 When possible it's generally a good idea to define data types as records, since
-Agda will know more things about them [^etalaws] and can infer values of record
+Agda will know more things about them[^etalaws] and can infer values of record
 types more easily too.  The syntax is quite straightforward: we define a
 constructor `_,_` and fields accessors `fst` and `snd`.
 
@@ -155,7 +155,7 @@ undefined :: forall a. a
 undefined = undefined
 ```
 
-Agda makes sure that this is not possible [^consistent], thus keeping the system
+Agda makes sure that this is not possible[^consistent], thus keeping the system
 *consistent*.  This has very pleasant consequences, the most prominent being
 that all programs terminate.  For this reason consistent systems must be
 Turing-incomplete (we can't write an infinite loops!), and thus Agda lets us
@@ -203,7 +203,7 @@ Rel X = X → X → Set
 
 The `Set₁` indicates that a relation between two `Set`s is 'larger' than a `Set`
 itself---this is nothing to worry about now, but it follows a tradition in set
-theory that goes back to Russell to avoid paradoxes [^girards].  `Set` is in
+theory that goes back to Russell to avoid paradoxes[^girards].  `Set` is in
 fact a shorthand for `Set₀` and represent the type of types of values: `Empty :
 Set₀ : Set₁ : Set₂ : ...`.
 
@@ -300,7 +300,7 @@ parameters are known as *indices*, as opposed to non-changing *parameters*.
 Parameters are named and to the left of the colon, while the type to the right
 of the colon will determine the number and type of indices---in this case two
 `⊥X⊤`s (remember, `Rel ⊥X⊤ = ⊥X⊤ → ⊥X⊤ → Set`).  This kind of data type is known
-as *inductive family* [^indices].
+as *inductive family*[^indices].
 
 [^indices]: Some might ask why Agda doesn't treat all parameters uniformly,
 simply allowing indices at will.  This is definitely an option (taken by other
@@ -337,7 +337,7 @@ We can easily get a 'normal' list back from an `OList`:
   toList (cons x xs _) = x ∷ toList xs
 \end{code}
 
-With the right data types, writing and proving correct [^sortcorrect] an
+With the right data types, writing and proving correct[^sortcorrect] an
 [insertion sort](https://en.wikipedia.org/wiki/Insertion_sort) is a breeze---I
 encourage you to try and writing yourself checking the goals as you pattern
 match, the only non-trivial case being the last one:
@@ -477,15 +477,15 @@ It's worth mentioned what 'equal' means here.  I have mentioned earlier that
 'evaluation and typechecking are intertwined': when the type checker has to
 decide if two types, or more generally two terms, are 'the same', it simply
 reduces them as far as possible (to their 'normal form') and then compares them
-syntactically.  Remember, every Agda term is terminating, so this procedure
-itself is guaranteed to terminate.  Thus, `refl : ((λ x → x) 1) ≡ 1` is
-acceptable, and so on.
+syntactically, plus some additional laws (like the mentioned ones for records).
+Remember, every Agda term is terminating, so this procedure itself is guaranteed
+to terminate.  Thus, `refl : ((λ x → x) 1) ≡ 1` is acceptable, and so on.
 
 This notion of equality is often called 'definitional' equality, as opposed to
 the user-level equality expressed by the inductive family we have just defined,
 which takes the name of 'propositional equality'.  Note that propositional
 equality *does not* imply definitional equality, unless the prop. equality is a
-closed term [^setoid].  In the general case we might have prop. equalities in
+closed term[^setoid].  In the general case we might have prop. equalities in
 scope that do not necessarily hold or involve abstracted variables, think of `λ
 (p : 3 ≡ 1) → ...`.
 
