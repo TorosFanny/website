@@ -153,6 +153,7 @@ markdownAgda opts classpr fp =
                                 liftIO (putStrLn s)
                                 throwError err
        setCurrentDirectory origDir
+       -- TODO try to skip the interface instead of just deleting it
        removeFile (replaceExtension fp "agdai")
        case r of
            Right s -> return s
