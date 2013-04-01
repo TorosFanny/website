@@ -24,4 +24,6 @@ It is interesting that in GHC Haskell colons are special too: type operators
 must start with one.  In that case however the surprise comes only when trying
 to *define* a type operator, which is much better.
 
+You can also visit <http://scalapuzzlers.com> for more Scala fun.
+
 [^1]: From 'Programming in Scala, Second Edition'.
