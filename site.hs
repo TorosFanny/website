@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 import           Data.Monoid ((<>))
 import           Hakyll
+import           LiterateAgda
 
 main :: IO ()
 main =
@@ -17,7 +18,7 @@ main =
        -- Posts
        match "posts/*" $
            do route $ setExtension "html"
-              compile $ pandocCompiler                                        >>=
+              compile $ pandocAgdaCompiler                                    >>=
                         loadAndApplyTemplate "templates/post.html"    postCtx >>=
                         saveSnapshot "content"                                >>=
                         loadAndApplyTemplate "templates/default.html" postCtx >>=

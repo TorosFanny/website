@@ -6,4 +6,4 @@ if [ $# -ne 1 ]; then
 fi
 
 make all
-scp cv.html cv.txt logo.png index.html bg.jpg $1
+rsync -va _site/ $1

@@ -1,6 +1,12 @@
-module LiterateAgda (markdownAgda) where
+module LiterateAgda
+    ( markdownAgda
+    , pandocAgdaCompilerWith
+    , pandocAgdaCompiler
+    ) where
 
 import           Control.Applicative
+import           Data.Char
+import           Data.Data (Data)
 import           Data.Function
 import           Data.List
 import           Data.Maybe
@@ -9,7 +15,9 @@ import           Data.Monoid
 import           Control.Monad.Error
 import           Control.Monad.State
 import qualified Data.Map as Map
+import           System.Directory
 import           System.Exit
+import           System.FilePath
 import           Text.XHtml.Strict
 
 import           Agda.Interaction.Highlighting.Precise
@@ -23,19 +31,17 @@ import           Agda.TypeChecking.Errors
 import           Agda.TypeChecking.Monad hiding (MetaInfo, Constructor)
 import           Agda.Utils.FileName
 import qualified Agda.Utils.IO.UTF8 as UTF8
+import           Hakyll.Core.Compiler
+import           Hakyll.Core.Identifier
+import           Hakyll.Core.Item
+import           Hakyll.Web.Pandoc
+import           Hakyll.Web.Pandoc.FileType
+import           Text.Pandoc
 
 checkFile :: AbsolutePath -> TCM TopLevelModuleName
 checkFile file = do resetState
-                    (i, mw) <- Imp.typeCheck file
-                    case mw of
-                        Nothing -> return (toTopLevelModuleName (iModuleName i))
-                        Just (Warnings _ unsolved@(_:_) _) ->
-                            typeError (UnsolvedMetas unsolved)
-                        Just (Warnings _ _ unsolved@(_:_)) ->
-                            typeError (UnsolvedConstraints unsolved)
-                        Just (Warnings termErrs@(_:_) _ _) ->
-                            typeError (TerminationCheckFailed termErrs)
-                        _ -> error "The impossible happened"
+                    (i, _) <- Imp.typeCheck file
+                    return (toTopLevelModuleName (iModuleName i))
 
 getModule :: TopLevelModuleName -> TCM (HighlightingInfo, String)
 getModule m =
@@ -65,20 +71,26 @@ groupLiterate :: [(Integer, String, MetaInfo)]
               -> [Either String [(Integer, String, MetaInfo)]]
 groupLiterate = begin
   where
-    -- TODO Make the spacing cleaner
+    -- TODO Make the spacing cleaner, and trim \begin{code} and end
     begin contents =
         let (com, rest) = span (notCode beginCode) contents
-        in Left ("\n\n" ++ concat [s | (_, s, _) <- com] ++ "\n\n") : end rest
+        in Left ("\n\n" ++ concat [s | (_, s, _) <- com] ++ "\n\n") :
+           trimTop (end rest)
 
     end []  = []
     end mis =
         case span (notCode endCode) mis of
-            (a, e : b) -> Right (a ++ [e]) : begin b
+            (a, e : b) -> Right (a ++ [trimEnd e]) : begin b
             _          -> error "malformed file"
-
 
     notCode :: (String -> MetaInfo -> Bool) -> (Integer, String, MetaInfo) -> Bool
     notCode f (_, s, mi) = not (f s mi)
+
+    trimTop (Right ((pos, s, mi) : rs) : rest) =
+        Right ((pos, dropWhile isSpace s, mi) : rs) : rest
+    trimTop x = x
+
+    trimEnd (pos, s, mi) = (pos, reverse (dropWhile isSpace (reverse s)), mi)
 
 -- Ripped off Agda.Interaction.Highlighting.HTML
 annotate :: TopLevelModuleName -> Integer -> MetaInfo -> Html -> Html
@@ -86,7 +98,7 @@ annotate m pos mi = anchor ! attributes
   where
     attributes = [name (show pos)] ++
                  fromMaybe [] (definitionSite mi >>= link) ++
-                 (case classes of [] -> []; cs -> [theclass $ unwords cs])
+                 (case classes of [] -> []; cs -> [theclass (unwords cs)])
 
     classes = maybe [] noteClasses (note mi) ++
               otherAspectClasses (otherAspects mi) ++
@@ -131,11 +143,41 @@ convert classpr m =
 
 markdownAgda :: CommandLineOptions -> String -> FilePath -> IO String
 markdownAgda opts classpr fp =
-    do r <- runTCM $ catchError (setCommandLineOptions opts >>
+    do -- We set to the directory of the file, we assume that the agda files are
+       -- in one flat directory which is not the one where Hakyll is ran in.
+       origDir <- getCurrentDirectory
+       setCurrentDirectory (dropFileName fp)
+       r <- runTCM $ catchError (setCommandLineOptions opts >>
                                  checkFile (mkAbsolute fp) >>= convert classpr)
                    $ \err -> do s <- prettyError err
                                 liftIO (putStrLn s)
                                 throwError err
+       setCurrentDirectory origDir
+       removeFile (replaceExtension fp "agdai")
        case r of
            Right s -> return s
            Left _  -> exitFailure
+
+isAgda :: Item a -> Bool
+isAgda i = ex == ".lagda"
+  where ex = snd . splitExtension . toFilePath . itemIdentifier $ i
+
+pandocAgdaCompilerWith :: ReaderOptions -> WriterOptions
+                       -> Compiler (Item String)
+pandocAgdaCompilerWith ropt wopt =
+    do i <- getResourceBody
+       if isAgda i
+          then cached cacheName $
+               -- TODO get rid of the unsafePerformIO, and have a more solid way
+               -- to get the absolute path
+               do it <- getUnderlying; unsafeCompiler $
+                      do fp <- (</> toFilePath it) <$> getCurrentDirectory
+                         s <- markdownAgda defaultOptions "Agda" fp
+                         let i' = i {itemBody = s}
+                         return (writePandocWith wopt (readMarkdown ropt <$> i'))
+          else pandocCompilerWith ropt wopt
+  where cacheName = "LiterateAgda.pandocAgdaCompilerWith"
+
+pandocAgdaCompiler :: Compiler (Item String)
+pandocAgdaCompiler =
+    pandocAgdaCompilerWith defaultHakyllReaderOptions defaultHakyllWriterOptions
