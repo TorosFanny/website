@@ -80,15 +80,14 @@ groupLiterate = begin
     notCode :: (String -> MetaInfo -> Bool) -> (Integer, String, MetaInfo) -> Bool
     notCode f (_, s, mi) = not (f s mi)
 
-annotate :: String -> TopLevelModuleName -> Integer -> MetaInfo -> Html -> Html
-annotate classpr m pos mi = anchor ! attributes
+annotate :: TopLevelModuleName -> Integer -> MetaInfo -> Html -> Html
+annotate m pos mi = anchor ! attributes
   where
     attributes = [name (show pos)] ++
                  fromMaybe [] (definitionSite mi >>= link) ++
                  (case classes of [] -> []; cs -> [theclass $ unwords cs])
 
-    classes = map (classpr ++) $
-              maybe [] noteClasses (note mi) ++
+    classes = maybe [] noteClasses (note mi) ++
               otherAspectClasses (otherAspects mi) ++
               maybe [] aspectClasses (aspect mi)
 
@@ -108,7 +107,9 @@ annotate classpr m pos mi = anchor ! attributes
     -- Notes are not included.
     noteClasses _ = []
 
-    link (m', pos') = if m == m' then Just [href $ "#" ++ show pos'] else Nothing
+    link (m', pos') = if m == m'
+                      then Just [href ("#" ++ show pos')]
+                      else Nothing
 
 toMarkdown :: String
            -> TopLevelModuleName -> [Either String [(Integer, String, MetaInfo)]]
@@ -116,9 +117,10 @@ toMarkdown :: String
 toMarkdown classpr m contents =
     concat [ case c of
                   Left s   -> s
-                  Right cs -> renderHtmlFragment . pre . mconcat $
-                              [ (annotate classpr m pos mi (stringToHtml s))
-                              | (pos, s, mi) <- cs ]
+                  Right cs ->
+                      let h = pre . mconcat $ [ (annotate m pos mi (stringToHtml s))
+                                              | (pos, s, mi) <- cs ]
+                      in  renderHtmlFragment (h ! [theclass classpr])
            | c <- contents ]
 
 convert :: String -> TopLevelModuleName -> TCM String
