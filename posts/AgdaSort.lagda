@@ -32,8 +32,9 @@ can be proven correct.  The implementation is largely inspired from a
 McBride.
 
 This blog post was generated from a literate Agda file, that you can find
-[here](TODO).  You should also be able to just copy paste and compile.  I'm not
-going to explain how to install Agda here, you can refer to the
+[here](https://github.com/bitonic/website/blob/master/posts/AgdaSort.lagda).
+You should also be able to just copy paste and compile.  I'm not going to
+explain how to install Agda here, you can refer to the
 [wiki](http://wiki.portal.chalmers.se/agda/pmwiki.php) or the wonderful
 [freenode channel](irc://chat.freenode.net/agda).  While I go over all concepts
 presented I won't go in depth to keep things reasonably brief: this is intended
@@ -100,7 +101,7 @@ signature.  For the converse reason we must provide a type for `B`.
 Now another 'boring' type, `Either`, plus the associated destructor (`either` in
 Haskell):
 
-\begin{code}
+\begin{code}  
 data Either (A : Set) (B : Set) : Set where
   left  : A → Either A B
   right : B → Either A B
@@ -359,7 +360,8 @@ version of this article which does exactly that.
   insert y (cons x xs (l≤x , x≤u)) (l≤y , y≤u) | left  y≤x =
     cons y (cons x xs (x≤̂y y≤x , x≤u)) (l≤y , y≤u)
   insert y (cons x xs (l≤x , x≤u)) (l≤y , y≤u) | right y>x =
-    cons x (insert x xs (x≤̂y (reflexive refl) , x≤u)) (l≤x , x≤u)
+    cons x (insert y xs ([ x≤̂y , (λ y≤x → absurd (y>x y≤x)) ] (total x y) , y≤u))
+         (l≤x , x≤u)
 \end{code}
 
 Insertion sort is just a fold, where we use the type `OList ⊥ ⊤` to represent a
@@ -495,7 +497,7 @@ abstracted variables, think of `λ (p : 3 ≡ 1) → ...`.
 we instead chose to parametrise our equality relation: sometimes propositional
 equality does not cut it, for example when working with functions.
 
-Let's prove that `≡` is an equivalent relation, and a `cong`ruence law which
+Let's prove that `≡` is an equivalence relation, and a `cong`ruence law which
 will be useful later:
 
 \begin{code}
@@ -550,8 +552,8 @@ Then we define a procedure to decide equality for naturals:
   ... | right x≢y = right (λ sx≡sy → x≢y (≡-suc sx≡sy))
 \end{code}
 
-Now for our ordering relation.  Every number is less or equal than zero, and if
-`x ≤ y` then `x + 1 ≤ y + 1`:
+Now for our ordering relation.  Every number is greater or equal than zero, and
+if `x ≤ y` then `x + 1 ≤ y + 1`:
 
 \begin{code}
   data _≤_ : Rel ℕ where
@@ -610,3 +612,21 @@ Finally, we can import the sorting functions.  We're done!
 \begin{code}
   open Sort _≟_ _≤?_ totalOrder using (isort; treeSort)
 \end{code}
+
+We can test our function:
+
+\begin{code}
+  willIBeSorted? : List ℕ
+  willIBeSorted? = treeSort (12 ∷ 3 ∷ 7 ∷ 4 ∷ 40 ∷ 5 ∷ 0 ∷ [])
+\end{code}
+
+A tap on `C-c C-n willIBeSorted?` will give the expected result:
+
+```{.sourceCode}
+0 ∷ 3 ∷ 4 ∷ 5 ∷ 7 ∷ 12 ∷ 40 ∷ []
+```
+
+## Comments?
+
+This is my first decently-sized blog post, so please complain on
+[Reddit](http://www.reddit.com/r/haskell/comments/1biasi/sorting_with_agda/)!
