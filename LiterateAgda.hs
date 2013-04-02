@@ -13,11 +13,12 @@ import           Data.List
 import           Data.Maybe
 import           Data.Monoid
 
-import           Control.Monad.Error
-import           Control.Monad.State
+import           Control.Monad.Error (catchError, throwError)
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.State (get)
 import qualified Data.Map as Map
 import           System.Directory
-import           System.Exit
+import           System.Exit (exitFailure)
 import           System.FilePath
 import           Text.XHtml.Strict
 
@@ -28,7 +29,8 @@ import           Agda.Syntax.Abstract.Name (toTopLevelModuleName)
 import           Agda.Syntax.Common
 import           Agda.Syntax.Concrete.Name (TopLevelModuleName)
 import           Agda.TypeChecking.Errors
-import           Agda.TypeChecking.Monad hiding (MetaInfo, Constructor)
+import           Agda.TypeChecking.Monad (TCM)
+import qualified Agda.TypeChecking.Monad as TCM
 import           Agda.Utils.FileName
 import qualified Agda.Utils.IO.UTF8 as UTF8
 import           Hakyll.Core.Compiler
@@ -38,16 +40,16 @@ import           Hakyll.Web.Pandoc
 import           Text.Pandoc
 
 checkFile :: AbsolutePath -> TCM TopLevelModuleName
-checkFile file = do resetState
-                    (i, _) <- Imp.typeCheck file
-                    return (toTopLevelModuleName (iModuleName i))
+checkFile file =
+    do TCM.resetState
+       toTopLevelModuleName . TCM.iModuleName . fst <$> Imp.typeCheck file
 
 getModule :: TopLevelModuleName -> TCM (HighlightingInfo, String)
 getModule m =
-    do Just mi <- getVisitedModule m
-       Just f <- Map.lookup m . stModuleToSource <$> get
+    do Just mi <- TCM.getVisitedModule m
+       Just f <- Map.lookup m . TCM.stModuleToSource <$> get
        s <- liftIO . UTF8.readTextFile . filePath $ f
-       return (iHighlighting (miInterface mi), s)
+       return (TCM.iHighlighting (TCM.miInterface mi), s)
 
 pairPositions :: HighlightingInfo -> String -> [(Integer, String, MetaInfo)]
 pairPositions info contents =
@@ -145,11 +147,11 @@ markdownAgda opts classpr fp =
        -- in one flat directory which is not the one where Hakyll is ran in.
        origDir <- getCurrentDirectory
        setCurrentDirectory (dropFileName fp)
-       r <- runTCM $ catchError (setCommandLineOptions opts >>
-                                 checkFile (mkAbsolute fp) >>= convert classpr)
-                   $ \err -> do s <- prettyError err
-                                liftIO (putStrLn s)
-                                throwError err
+       r <- TCM.runTCM $ catchError (TCM.setCommandLineOptions opts >>
+                                     checkFile (mkAbsolute fp) >>= convert classpr)
+                       $ \err -> do s <- prettyError err
+                                    liftIO (putStrLn s)
+                                    throwError err
        setCurrentDirectory origDir
        case r of
            Right s -> return (dropWhile isSpace s)
