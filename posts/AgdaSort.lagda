@@ -1,6 +1,6 @@
 ---
 title: Agda by Example: Sorting
-date: 2013-03-25
+date: 2013-04-01
 ---
 
 ## Agda?
@@ -72,7 +72,7 @@ much like Haskell's `[] :: * → *`.
 Then we have two constructors, `[]` for an empty list and `_∷_` to cons an
 element to an existing list.  Agda gives us great flexibility in the syntax:
 arbitrary operators can defined where `_` indicates an argument, and identifiers
-are not limited to the usual mix of alphanumeric characters plus a couple of
+are not limited to the usual mix of alphanumeric characters plus a few of
 symbols.  In this case `_∷_` is a binary operator.  The fixity declaration is
 similar to what we would find in Haskell.
 
