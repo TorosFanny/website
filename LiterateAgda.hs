@@ -1,3 +1,5 @@
+-- Parts of the code are taken from the Agda.Interaction.Highlighting.HTML
+-- module of Agda.
 module LiterateAgda
     ( markdownAgda
     , pandocAgdaCompilerWith
@@ -89,7 +91,6 @@ groupLiterate = begin
 
     trimEnd (pos, s, mi) = (pos, reverse (dropWhile isSpace (reverse s)), mi)
 
--- Ripped off Agda.Interaction.Highlighting.HTML
 annotate :: TopLevelModuleName -> Integer -> MetaInfo -> Html -> Html
 annotate m pos mi = anchor ! attributes
   where
