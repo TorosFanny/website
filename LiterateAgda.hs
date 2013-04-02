@@ -150,8 +150,6 @@ markdownAgda opts classpr fp =
                                 liftIO (putStrLn s)
                                 throwError err
        setCurrentDirectory origDir
-       -- TODO try to skip the interface instead of just deleting it
-       removeFile (replaceExtension fp "agdai")
        case r of
            Right s -> return (dropWhile isSpace s)
            Left _  -> exitFailure
@@ -160,8 +158,7 @@ isAgda :: Item a -> Bool
 isAgda i = ex == ".lagda"
   where ex = snd . splitExtension . toFilePath . itemIdentifier $ i
 
-pandocAgdaCompilerWith :: ReaderOptions -> WriterOptions
-                       -> Compiler (Item String)
+pandocAgdaCompilerWith :: ReaderOptions -> WriterOptions -> Compiler (Item String)
 pandocAgdaCompilerWith ropt wopt =
     do i <- getResourceBody
        if isAgda i

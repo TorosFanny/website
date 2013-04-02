@@ -16,7 +16,7 @@ main =
        match "templates/*" $ compile templateCompiler
 
        -- Posts
-       match "posts/*" $
+       match ("posts/*.md" .&&. "posts/*.lagda" .&&. "posts/*.lhs") $
            do route $ setExtension "html"
               compile $ pandocAgdaCompiler                                    >>=
                         loadAndApplyTemplate "templates/post.html"    postCtx >>=
