@@ -7,10 +7,8 @@ main :: IO ()
 main =
     hakyll $
     do -- Assets
-       match "images/*" $ do route idRoute; compile copyFileCompiler
-       match "css/*"    $ do route idRoute; compile copyFileCompiler
-       match "js/*"     $ do route idRoute; compile copyFileCompiler
-       match "fonts/*"  $ do route idRoute; compile copyFileCompiler
+       match ("images/*" .||. "css/*" .||. "js/*" .||. "fonts/*") $
+           do route idRoute; compile copyFileCompiler
 
        -- Templates
        match "templates/*" $ compile templateCompiler

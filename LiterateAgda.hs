@@ -168,13 +168,14 @@ pandocAgdaCompilerWith ropt wopt =
           then cached cacheName $
                -- TODO get rid of the unsafePerformIO, and have a more solid way
                -- to get the absolute path
-               do it <- getUnderlying; unsafeCompiler $
-                      do fp <- (</> toFilePath it) <$> getCurrentDirectory
-                         s <- markdownAgda defaultOptions "Agda" fp
-                         let i' = i {itemBody = s}
-                         return (writePandocWith wopt (readMarkdown ropt <$> i'))
+               unsafeCompiler $
+               do fp <- (</> toFilePath (itemIdentifier i)) <$> getCurrentDirectory
+                  s <- markdownAgda defaultOptions "Agda" fp
+                  let i' = i {itemBody = s}
+                  return (writePandocWith wopt (readMarkdown ropt <$> i'))
           else pandocCompilerWith ropt wopt
-  where cacheName = "LiterateAgda.pandocAgdaCompilerWith"
+  where
+    cacheName = "LiterateAgda.pandocAgdaCompilerWith"
 
 pandocAgdaCompiler :: Compiler (Item String)
 pandocAgdaCompiler =

@@ -46,7 +46,9 @@ in Agda'.
 
 Let's get started!
 
-## Good old `List`s
+## A few types
+
+### Good old `List`s
 
 \begin{code}
 module AgdaSort where
@@ -93,7 +95,7 @@ curly braces.  Here we are also omitting the type of the parameter `A` by using
 `∀`.  We can do this since `A` appears as an argument to `List` later in the
 signature.  For the converse reason we must provide a type for `B`.
 
-## Sum and products
+### Sum and products
 
 Now another 'boring' type, `Either`, plus the associated destructor (`either` in
 Haskell):
@@ -128,7 +130,7 @@ constructor `_,_` and fields accessors `fst` and `snd`.
 [^etalaws]: Most notably, the Agda typechecker will be able to use the η-law `x
 = fst x , snd x` when deciding if two terms are equal.
 
-## Unhabited types
+### Unhabited types
 
 Now for a type with no inhabitants---no constructors:
 
