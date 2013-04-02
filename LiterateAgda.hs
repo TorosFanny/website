@@ -70,7 +70,7 @@ groupLiterate :: [(Integer, String, MetaInfo)]
               -> [Either String [(Integer, String, MetaInfo)]]
 groupLiterate = begin
   where
-    -- TODO Make the spacing cleaner, and trim \begin{code} and end
+    -- TODO Make the spacing cleaner
     begin contents =
         let (com, rest) = span (notCode beginCode) contents
         in Left ("\n\n" ++ concat [s | (_, s, _) <- com] ++ "\n\n") :
