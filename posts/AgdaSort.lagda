@@ -96,7 +96,7 @@ curly braces.  Here we are also omitting the type of the parameter `A` by using
 `∀`.  We can do this since `A` appears as an argument to `List` later in the
 signature.  For the converse reason we must provide a type for `B`.
 
-### Sum and products
+### Sums
 
 Now another 'boring' type, `Either`, plus the associated destructor (`either` in
 Haskell):
@@ -109,18 +109,6 @@ data Either (A : Set) (B : Set) : Set where
 [_,_] : ∀ {A B} {C : Set} → (A → C) → (B → C) → Either A B → C
 [ f , g ] (left x)  = f x
 [ f , g ] (right x) = g x
-\end{code}
-
-And `_∧_`, corresponding to Haskell's binary tuple:
-
-\begin{code}
-infixr 2 _∧_
-infixr 4 _,_
-record _∧_ (A B : Set) : Set where
-  constructor _,_
-  field
-    fst : A
-    snd : B
 \end{code}
 
 ### Unhabited types
