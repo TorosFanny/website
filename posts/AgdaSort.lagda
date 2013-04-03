@@ -421,9 +421,16 @@ It's worth mentioned what 'equal' means here.  I have mentioned earlier that
 'evaluation and typechecking are intertwined': when the type checker has to
 decide if two types, or more generally two terms, are 'the same', it simply
 reduces them as far as possible (to their 'normal form') and then compares them
-syntactically, plus some additional laws (like the mentioned ones for records).
-Remember, every Agda term is terminating, so this procedure itself is guaranteed
-to terminate.  Thus, `refl : ((λ x → x) 1) ≡ 1` is acceptable, and so on.
+syntactically, plus some additional laws[^etalaws].  Remember, every Agda term
+is terminating, so this procedure itself is guaranteed to terminate.  Thus,
+`refl : ((λ x → x) 1) ≡ 1` is acceptable, and so on.
+
+[^etalaws]: For example partial applications are expanded, so that if `f : A ->
+B`, then `f ≡ λ x → f x`.  Similary, if we have a record `Tuple (A B : Set) :
+Set` with fields `fst : A` and `snd : B`, and constructor `_,_`; if `x : Tuple A
+B` then `x ≡ fst x , snd x`.  Apart from these *η laws*, other additions can be
+made to have more terms deemed as equal by the type checker, details vary from
+system to system.
 
 This notion of equality is often called 'definitional' equality, as opposed to
 the user-level equality expressed by the inductive family we have just defined,
