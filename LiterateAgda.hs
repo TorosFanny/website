@@ -143,16 +143,11 @@ convert classpr m =
 
 markdownAgda :: CommandLineOptions -> String -> FilePath -> IO String
 markdownAgda opts classpr fp =
-    do -- We set to the directory of the file, we assume that the agda files are
-       -- in one flat directory which is not the one where Hakyll is ran in.
-       origDir <- getCurrentDirectory
-       setCurrentDirectory (dropFileName fp)
-       r <- TCM.runTCM $ catchError (TCM.setCommandLineOptions opts >>
+    do r <- TCM.runTCM $ catchError (TCM.setCommandLineOptions opts >>
                                      checkFile (mkAbsolute fp) >>= convert classpr)
                        $ \err -> do s <- prettyError err
                                     liftIO (putStrLn s)
                                     throwError err
-       setCurrentDirectory origDir
        case r of
            Right s -> return (dropWhile isSpace s)
            Left _  -> exitFailure
@@ -166,13 +161,20 @@ pandocAgdaCompilerWith ropt wopt =
     do i <- getResourceBody
        if isAgda i
           then cached cacheName $
+               do fp <- getResourceFilePath
                -- TODO get rid of the unsafePerformIO, and have a more solid way
-               -- to get the absolute path
-               unsafeCompiler $
-               do fp <- (</> toFilePath (itemIdentifier i)) <$> getCurrentDirectory
-                  s <- markdownAgda defaultOptions "Agda" fp
-                  let i' = i {itemBody = s}
-                  return (writePandocWith wopt (readMarkdown ropt <$> i'))
+               -- of getting the absolute path
+                  unsafeCompiler $
+                      do -- We set to the directory of the file, we assume that
+                         -- the agda files are in one flat directory which might
+                         -- not be not the one where Hakyll is ran in.
+                         origDir <- getCurrentDirectory
+                         let abfp = origDir </> fp
+                         setCurrentDirectory (dropFileName abfp)
+                         s <- markdownAgda defaultOptions "Agda" abfp
+                         setCurrentDirectory origDir
+                         let i' = i {itemBody = s}
+                         return (writePandocWith wopt (readMarkdown ropt <$> i'))
           else pandocCompilerWith ropt wopt
   where
     cacheName = "LiterateAgda.pandocAgdaCompilerWith"

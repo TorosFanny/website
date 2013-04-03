@@ -308,7 +308,7 @@ as *inductive family*[^indices].
 [^indices]: Some might ask why Agda doesn't treat all parameters uniformly,
 simply allowing indices at will.  This is definitely an option (taken by other
 programming languages, and GHC's GADTs) but separating them brings more clarity
-in the interface and lets Agda deal with inductiva families more
+in the interface and lets Agda deal with inductive families more
 straightforwardly.
 
 A 'sandwiching' relation will also be handy:
