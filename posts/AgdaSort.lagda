@@ -123,14 +123,6 @@ record _∧_ (A B : Set) : Set where
     snd : B
 \end{code}
 
-When possible it's generally a good idea to define data types as records, since
-Agda will know more things about them[^etalaws] and can infer values of record
-types more easily too.  The syntax is quite straightforward: we define a
-constructor `_,_` and fields accessors `fst` and `snd`.
-
-[^etalaws]: Most notably, the Agda typechecker will be able to use the η-law `x
-= fst x , snd x` when deciding if two terms are equal.
-
 ### Unhabited types
 
 Now for a type with no inhabitants---no constructors:
@@ -228,7 +220,10 @@ are related or not.
 Now the interesting part.  To sort a list, we need two relations on the elements
 of the list: some notion of equality and some ordering on the elements (in fact
 the latter requires the former).  More formally, the equality will be an
-[equivalence relation](https://en.wikipedia.org/wiki/Equivalence_relation):
+[equivalence relation](https://en.wikipedia.org/wiki/Equivalence_relation).  To
+express abstract properties over types we can use a record, much like type
+classes are used in Haskell---only more flexible but without the big advantage
+of having automatic instance resolution:
 
 \begin{code}
 record Equivalence {X} (_≈_ : Rel X) : Set₁ where
@@ -251,10 +246,6 @@ record TotalOrder {X} (_≈_ : Rel X) (_≤_ : Rel X) : Set₁ where
     reflexive   : ∀ {x y}   → x ≈ y → x ≤ y
     equivalence : Equivalence _≈_
 \end{code}
-
-Records are often used to collect abstract properties over types, much like type
-classes are used in Haskell---only more flexible but without the big advantage
-of having automatic instance resolution.
 
 ## Sorting
 
@@ -311,24 +302,17 @@ programming languages, and GHC's GADTs) but separating them brings more clarity
 in the interface and lets Agda deal with inductive families more
 straightforwardly.
 
-A 'sandwiching' relation will also be handy:
-
-\begin{code}
-  _≤_≤_ : ⊥X⊤ → X → ⊥X⊤ → Set
-  l ≤ x ≤ u = l ≤̂ ⟦ x ⟧ ∧ ⟦ x ⟧ ≤̂ u
-\end{code}
-
 We can now define the type of bounded, ordered lists:
 
 \begin{code}
   data OList (l u : ⊥X⊤) : Set where
     nil  : l ≤̂ u → OList l u
-    cons : ∀ x (xs : OList ⟦ x ⟧ u) → l ≤ x ≤ u → OList l u
+    cons : ∀ x (xs : OList ⟦ x ⟧ u) → l ≤̂ ⟦ x ⟧ → OList l u
 \end{code}
 
 `nil` will work with any bounds, provided that the lower `l` is less or equal
 than the upper `u`.  `cons` will cons an element `x` to a list with `x` as a
-lower bound, and return a list with lower bound `l`, provided that `l ≤ x ≤ u`.
+lower bound, and return a list with lower bound `l`, provided that `l ≤̂ ⟦ x ⟧`.
 It's clear from how `cons` work that the elements in `OList` will be ordered
 according to the `≤` relation.
 
@@ -354,14 +338,12 @@ file](https://github.com/bitonic/agda-examples/blob/master/Sort.agda) for a
 version of this article which does exactly that.
 
 \begin{code}
-  insert : ∀ {l u} x → OList l u → l ≤ x ≤ u → OList l u
-  insert y (nil _)                 (l≤y , y≤u) = cons y (nil y≤u) (l≤y , y≤u)
-  insert y (cons x xs (l≤x , x≤u)) _           with y ≤? x
-  insert y (cons x xs (l≤x , x≤u)) (l≤y , y≤u) | left  y≤x =
-    cons y (cons x xs (x≤̂y y≤x , x≤u)) (l≤y , y≤u)
-  insert y (cons x xs (l≤x , x≤u)) (l≤y , y≤u) | right y>x =
-    cons x (insert y xs ([ x≤̂y , (λ y≤x → absurd (y>x y≤x)) ] (total x y) , y≤u))
-         (l≤x , x≤u)
+  insert : ∀ {l u} x → OList l u → l ≤̂ ⟦ x ⟧ → ⟦ x ⟧ ≤̂ u → OList l u
+  insert y (nil _)         l≤y y≤u = cons y (nil y≤u) l≤y
+  insert y (cons x xs l≤x) l≤y y≤u with y ≤? x
+  insert y (cons x xs l≤x) l≤y y≤u | left  y≤x = cons y (cons x xs (x≤̂y y≤x)) l≤y
+  insert y (cons x xs l≤x) l≤y y≤u | right y>x =
+    cons x (insert y xs ([ x≤̂y , (λ y≤x → absurd (y>x y≤x)) ] (total x y)) y≤u) l≤x
 \end{code}
 
 Insertion sort is just a fold, where we use the type `OList ⊥ ⊤` to represent a
@@ -369,7 +351,7 @@ sorted list with 'open' bounds:
 
 \begin{code}
   isort′ : List X → OList ⊥ ⊤
-  isort′ = foldr (λ x xs → insert x xs (⊥≤̂ , ≤̂⊤)) (nil ⊥≤̂)
+  isort′ = foldr (λ x xs → insert x xs ⊥≤̂ ≤̂⊤) (nil ⊥≤̂)
 
   isort : List X → List X
   isort xs = toList (isort′ xs)
@@ -391,13 +373,13 @@ The technique is similar to that employed in `OList`.  Then we need a procedure
 to insert an element in an existing tree:
 
 \begin{code}
-  newLeaf : ∀ {l u} → (x : X) → Tree l u → l ≤ x ≤ u → Tree l u
-  newLeaf x (leaf _)       (l≤x , x≤u) = node x (leaf l≤x) (leaf x≤u)
-  newLeaf x (node y ly yu) _           with x ≤? y
-  newLeaf x (node y ly yu) (l≤x , x≤u) | left x≤y =
-    node y (newLeaf x ly (l≤x , x≤̂y x≤y)) yu
-  newLeaf x (node y ly yu) (l≤x , x≤u) | right x>y  =
-    node y ly (newLeaf x yu ([ (λ x≤y → absurd (x>y x≤y)) , x≤̂y ] (total x y) , x≤u))
+  newLeaf : ∀ {l u} → (x : X) → Tree l u → l ≤̂ ⟦ x ⟧ → ⟦ x ⟧ ≤̂ u → Tree l u
+  newLeaf x (leaf _)       l≤x x≤u = node x (leaf l≤x) (leaf x≤u)
+  newLeaf x (node y ly yu) l≤x x≤u with x ≤? y
+  newLeaf x (node y ly yu) l≤x x≤u | left x≤y  =
+    node y (newLeaf x ly l≤x (x≤̂y x≤y)) yu
+  newLeaf x (node y ly yu) l≤x x≤u | right x>y =
+    node y ly (newLeaf x yu ([ (λ x≤y → absurd (x>y x≤y)) , x≤̂y ] (total x y)) x≤u)
 \end{code}
 
 Again, the only tricky bit is the last one, where we need to convince Agda that
@@ -407,36 +389,7 @@ Similar to `isort′`, turning a `List` into a `Tree` is a simple fold:
 
 \begin{code}
   fromList : List X → Tree ⊥ ⊤
-  fromList = foldr (λ x xs → newLeaf x xs (⊥≤̂ , ≤̂⊤)) (leaf ⊥≤̂)
-\end{code}
-
-Now we need to 'flatten' a `Tree` into an `OList`.  To do that we need a few
-additional lemmas---first, transitivity for the lifted ordering:
-
-\begin{code}
-  ≤̂-trans : ∀ {l x u} → l ≤̂ x → x ≤̂ u → l ≤̂ u
-  ≤̂-trans ⊥≤̂        _         = ⊥≤̂
-  ≤̂-trans _         ≤̂⊤        = ≤̂⊤
-  ≤̂-trans (x≤̂y l≤x) (x≤̂y x≤u) = x≤̂y (trans l≤x x≤u)
-\end{code}
-
-Here we use pattern matching in a new way: since the value of the indices of `≤̂`
-depends on the constructors, matching on a constructor refines the context with
-the new information.  For example in the first case pattern matching `⊥≤̂` turns
-all occurrences of `l` into `⊥` in the respective context.  Pattern matching is
-a much more powerful notion in Agda that is in in most (even dependently typed)
-programming languages---it can not only change the context, but it will also
-constraint the possible constructors of other parameters, if they are of a type
-with indices and those indices have been refined.  This collection of techniques
-is known as 'dependent pattern matching'.
-
-Then, something that shows that the bounds of an ordered list are ordered
-correctly:
-
-\begin{code}
-  OList-≤ : ∀ {l u} → OList l u → l ≤̂ u
-  OList-≤ (nil l≤u)               = l≤u
-  OList-≤ (cons x xu (l≤x , x≤u)) = ≤̂-trans l≤x (OList-≤ xu)
+  fromList = foldr (λ x xs → newLeaf x xs ⊥≤̂ ≤̂⊤) (leaf ⊥≤̂)
 \end{code}
 
 Now we can define `OList` concatenation, with the twist of inserting a new
@@ -444,9 +397,8 @@ element in the middle; and finally `flatten`:
 
 \begin{code}
   _⇒_++_ : ∀ {l u} x → OList l ⟦ x ⟧ → OList ⟦ x ⟧ u → OList l u
-  x ⇒ nil l≤u               ++ xu = cons x xu (l≤u , OList-≤ xu)
-  x ⇒ cons y yx (l≤y , y≤x) ++ xu =
-    cons y (x ⇒ yx ++ xu) (l≤y , ≤̂-trans y≤x (OList-≤ xu))
+  x ⇒ nil l≤u       ++ xu = cons x xu l≤u
+  x ⇒ cons y yx l≤y ++ xu = cons y (x ⇒ yx ++ xu) l≤y
 
   flatten : ∀ {l u} → Tree l u → OList l u
   flatten (leaf l≤u)     = (nil l≤u)
@@ -457,7 +409,7 @@ Then we are good with yet another fold.
 
 \begin{code}
   treeSort′ : List X → OList ⊥ ⊤
-  treeSort′ xs = flatten (foldr (λ x xs → newLeaf x xs (⊥≤̂ , ≤̂⊤)) (leaf ⊥≤̂) xs)
+  treeSort′ xs = flatten (foldr (λ x xs → newLeaf x xs ⊥≤̂ ≤̂⊤) (leaf ⊥≤̂) xs)
 
   treeSort : List X → List X
   treeSort xs = toList (treeSort′ xs)
@@ -514,10 +466,16 @@ will be useful later:
   cong _ refl = refl
 \end{code}
 
-All the definitions above rely on the dependent pattern matching mentioned
-before---we *need* to pattern match for the body to work, otherwise the type
-checker does not know that the terms on each side of the `≡` are definitionally
-equal.
+Here we use pattern matching in a new way: since the value of the indices of `≡`
+depends on the constructors, matching on a constructor refines the context with
+the new information.  For example in `sym` pattern matching `refl` will unify
+`y` and `x`, turning them into the same variable in the context of the
+definition for `sym`, and thus letting us invoke `refl` again.  Pattern matching
+is a much more powerful notion in Agda that is in in most (even dependently
+typed) programming languages---it can not only change the context, but it will
+also constraint the possible constructors of other parameters, if they are of a
+type with indices and those indices have been refined.  This collection of
+techniques is known as 'dependent pattern matching'.
 
 ## Natural numbers
 

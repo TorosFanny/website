@@ -170,7 +170,7 @@ pandocAgdaCompilerWith ropt wopt aopt =
                          -- the agda files are in one flat directory which might
                          -- not be not the one where Hakyll is ran in.
                          origDir <- getCurrentDirectory
-                         let abfp = origDir </> fp
+                         abfp <- canonicalizePath fp
                          setCurrentDirectory (dropFileName abfp)
                          s <- markdownAgda aopt "Agda" abfp
                          setCurrentDirectory origDir
