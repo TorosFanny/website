@@ -156,8 +156,9 @@ isAgda :: Item a -> Bool
 isAgda i = ex == ".lagda"
   where ex = snd . splitExtension . toFilePath . itemIdentifier $ i
 
-pandocAgdaCompilerWith :: ReaderOptions -> WriterOptions -> Compiler (Item String)
-pandocAgdaCompilerWith ropt wopt =
+pandocAgdaCompilerWith :: ReaderOptions -> WriterOptions -> CommandLineOptions
+                       -> Compiler (Item String)
+pandocAgdaCompilerWith ropt wopt aopt =
     do i <- getResourceBody
        if isAgda i
           then cached cacheName $
@@ -171,7 +172,7 @@ pandocAgdaCompilerWith ropt wopt =
                          origDir <- getCurrentDirectory
                          let abfp = origDir </> fp
                          setCurrentDirectory (dropFileName abfp)
-                         s <- markdownAgda defaultOptions "Agda" abfp
+                         s <- markdownAgda aopt "Agda" abfp
                          setCurrentDirectory origDir
                          let i' = i {itemBody = s}
                          return (writePandocWith wopt (readMarkdown ropt <$> i'))
@@ -182,3 +183,4 @@ pandocAgdaCompilerWith ropt wopt =
 pandocAgdaCompiler :: Compiler (Item String)
 pandocAgdaCompiler =
     pandocAgdaCompilerWith defaultHakyllReaderOptions defaultHakyllWriterOptions
+                           defaultOptions
