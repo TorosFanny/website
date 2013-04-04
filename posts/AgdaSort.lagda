@@ -245,7 +245,7 @@ we have already been using it by defining records, which are implicitly modules.
 module Sort {X} {_≈_ _≤_ : Rel X}
             (_≈?_ : Decidable _≈_) (_≤?_ : Decidable _≤_)
             (ord : TotalOrder _≈_ _≤_) where
-  open TotalOrder ord using (trans; total; reflexive; equivalence)
+  open TotalOrder ord using (total; equivalence)
   open Equivalence equivalence using (refl)
 \end{code}
 
@@ -464,13 +464,13 @@ will be useful later:
 Here we use pattern matching in a new way: since the value of the indices of `≡`
 depends on the constructors, matching on a constructor refines the context with
 the new information.  For example in `sym` pattern matching `refl` will unify
-`y` and `x`, turning them into the same variable in the context of the
-definition for `sym`, and thus letting us invoke `refl` again.  Pattern matching
-is a much more powerful notion in Agda that is in in most (even dependently
-typed) programming languages---it can not only change the context, but it will
-also constraint the possible constructors of other parameters, if they are of a
-type with indices and those indices have been refined.  This collection of
-techniques is known as 'dependent pattern matching'.
+`y` and `x`, turning them into the same variable in the context for the body of
+`sym`, and thus letting us invoke `refl` again.  Pattern matching is a much more
+powerful notion in Agda that is in in most (even dependently typed) programming
+languages---it can not only change the context, but it will also constraint the
+possible constructors of other parameters, if they are of a type with indices
+and those indices have been refined.  This collection of techniques is known as
+'dependent pattern matching'.
 
 ## Natural numbers
 
