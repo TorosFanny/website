@@ -243,14 +243,13 @@ we have already been using it by defining records, which are implicitly modules.
 
 \begin{code}
 module Sort {X} {_≈_ _≤_ : Rel X}
-            (_≈?_ : Decidable _≈_) (_≤?_ : Decidable _≤_)
-            (ord : TotalOrder _≈_ _≤_) where
+            (_≤?_ : Decidable _≤_) (ord : TotalOrder _≈_ _≤_) where
   open TotalOrder ord using (total; equivalence)
   open Equivalence equivalence using (refl)
 \end{code}
 
-We require both relations to be decidable, and we bring in scope some fields of
-the records using `open`, so that we can use them directly.
+We require the ordering relation to be decidable, and we bring in scope some
+fields of the records using `open`, so that we can use them directly.
 
 ### Insertion sort
 
@@ -488,21 +487,8 @@ module Nat where
 The definition for naturals is the usual one---the pragmas are there so that we
 can use number literals.
 
-Then we define a procedure to decide equality for naturals:
-
 \begin{code}
-  open PropositionalEquality using (_≡_; refl; cong; equivalence)
 
-  ≡-suc : ∀ {x y} → suc x ≡ suc y → x ≡ y
-  ≡-suc refl = refl
-
-  _≟_ : Decidable _≡_
-  zero  ≟ zero  = left refl
-  zero  ≟ suc y = right λ()
-  suc x ≟ zero  = right λ()
-  suc x ≟ suc y with x ≟ y
-  ... | left  x≡y = left  (cong suc x≡y)
-  ... | right x≢y = right (λ sx≡sy → x≢y (≡-suc sx≡sy))
 \end{code}
 
 Now for our ordering relation.  Every number is greater or equal than zero, and
@@ -531,6 +517,8 @@ With the help of the dual of `s≤s`, we can write our decision function for `�
 And the required laws to make a total order out of `≤`:
 
 \begin{code}
+  open PropositionalEquality using (_≡_; refl; cong; equivalence)
+
   antisym : ∀ {x y} → x ≤ y → y ≤ x → x ≡ y
   antisym z≤n       z≤n       = refl
   antisym (s≤s x≤y) (s≤s y≤x) = cong suc (antisym x≤y y≤x)
@@ -563,7 +551,7 @@ And the required laws to make a total order out of `≤`:
 Finally, we can import the sorting functions.  We're done!
 
 \begin{code}
-  open Sort _≟_ _≤?_ totalOrder using (isort; treeSort)
+  open Sort _≤?_ totalOrder using (isort; treeSort)
 \end{code}
 
 We can test our function:
