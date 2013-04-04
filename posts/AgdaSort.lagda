@@ -269,9 +269,9 @@ considerations about the top and bottom elements:
 
 \begin{code}
   data _≤̂_ : Rel ⊥X⊤ where
-    ⊥≤̂ : ∀ {x} → ⊥ ≤̂ x
-    ≤̂⊤ : ∀ {x} → x ≤̂ ⊤
-    x≤̂y : ∀ {x y} → x ≤ y → ⟦ x ⟧ ≤̂ ⟦ y ⟧
+    ⊥≤̂     : ∀ {x} → ⊥ ≤̂ x
+    ≤̂⊤     : ∀ {x} → x ≤̂ ⊤
+    ≤-lift : ∀ {x y} → x ≤ y → ⟦ x ⟧ ≤̂ ⟦ y ⟧
 \end{code}
 
 Note that this data type is different from what we have defined before: the
@@ -328,9 +328,9 @@ version of this article which does exactly that.
   insert : ∀ {l u} x → OList l u → l ≤̂ ⟦ x ⟧ → ⟦ x ⟧ ≤̂ u → OList l u
   insert y (nil _)         l≤y y≤u = cons y (nil y≤u) l≤y
   insert y (cons x xs l≤x) l≤y y≤u with y ≤? x
-  insert y (cons x xs l≤x) l≤y y≤u | left  y≤x = cons y (cons x xs (x≤̂y y≤x)) l≤y
+  insert y (cons x xs l≤x) l≤y y≤u | left  y≤x = cons y (cons x xs (≤-lift y≤x)) l≤y
   insert y (cons x xs l≤x) l≤y y≤u | right y>x =
-    cons x (insert y xs ([ x≤̂y , (λ y≤x → absurd (y>x y≤x)) ] (total x y)) y≤u) l≤x
+    cons x (insert y xs ([ ≤-lift , (λ y≤x → absurd (y>x y≤x)) ] (total x y)) y≤u) l≤x
 \end{code}
 
 Insertion sort is just a fold, where we use the type `OList ⊥ ⊤` to represent a
@@ -364,9 +364,9 @@ to insert an element in an existing tree:
   newLeaf x (leaf _)       l≤x x≤u = node x (leaf l≤x) (leaf x≤u)
   newLeaf x (node y ly yu) l≤x x≤u with x ≤? y
   newLeaf x (node y ly yu) l≤x x≤u | left x≤y  =
-    node y (newLeaf x ly l≤x (x≤̂y x≤y)) yu
+    node y (newLeaf x ly l≤x (≤-lift x≤y)) yu
   newLeaf x (node y ly yu) l≤x x≤u | right x>y =
-    node y ly (newLeaf x yu ([ (λ x≤y → absurd (x>y x≤y)) , x≤̂y ] (total x y)) x≤u)
+    node y ly (newLeaf x yu ([ (λ x≤y → absurd (x>y x≤y)) , ≤-lift ] (total x y)) x≤u)
 \end{code}
 
 Again, the only tricky bit is the last one, where we need to convince Agda that
