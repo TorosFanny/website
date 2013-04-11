@@ -101,32 +101,32 @@ module Sort {X : Set} {_≈_ _≤_ : Rel₀ X} (ord : IsTotalOrder _≈_ _≤_) 
   flatten (2-node x lx xu)      = x ⇒ flatten lx ++ flatten xu
   flatten (3-node x y lx xy yu) = x ⇒ flatten lx ++ (y ⇒ flatten xy ++ flatten yu)
 
-  AnyT : ∀ {l u n} → (X → Set) → Tree l u n → Set
-  AnyT P (empty _)             = Empty
-  AnyT P (2-node x lx xu)      = P x ⊎ AnyT P lx ⊎ AnyT P xu
-  AnyT P (3-node x y lx xy yu) = P x ⊎ P y ⊎ AnyT P lx ⊎ AnyT P xy ⊎ AnyT P yu
+  -- AnyT : ∀ {l u n} → (X → Set) → Tree l u n → Set
+  -- AnyT P (empty _)             = Empty
+  -- AnyT P (2-node x lx xu)      = P x ⊎ AnyT P lx ⊎ AnyT P xu
+  -- AnyT P (3-node x y lx xy yu) = P x ⊎ P y ⊎ AnyT P lx ⊎ AnyT P xy ⊎ AnyT P yu
 
-  _∈T_ : ∀ {l u n} → X → Tree l u n → Set
-  x ∈T t = AnyT (λ y → x ≡ y) t
+  -- _∈T_ : ∀ {l u n} → X → Tree l u n → Set
+  -- x ∈T t = AnyT (λ y → x ≡ y) t
 
-  AnyO : ∀ {l u} → (X → Set) → OList l u → Set
-  AnyO P (nil _)       = Empty
-  AnyO P (cons x xs _) = P x ⊎ AnyO P xs
+  -- AnyO : ∀ {l u} → (X → Set) → OList l u → Set
+  -- AnyO P (nil _)       = Empty
+  -- AnyO P (cons x xs _) = P x ⊎ AnyO P xs
 
-  AnyO-++ : (P : X → Set) →
-            ∀ {l u} x → (lx : OList l ⟦ x ⟧) → (xu : OList ⟦ x ⟧ u) →
-            AnyO P (x ⇒ lx ++ xu) ↔ P x ⊎ AnyO P lx ⊎ AnyO P xu
-  AnyO-++ = {!!}
+  -- AnyO-++ : (P : X → Set) →
+  --           ∀ {l u} x → (lx : OList l ⟦ x ⟧) → (xu : OList ⟦ x ⟧ u) →
+  --           AnyO P (x ⇒ lx ++ xu) ↔ P x ⊎ AnyO P lx ⊎ AnyO P xu
+  -- AnyO-++ = {!!}
 
-  _∈O_ : ∀ {l u} → X → OList l u → Set
-  x ∈O xs = AnyO (λ y → x ≡ y) xs
+  -- _∈O_ : ∀ {l u} → X → OList l u → Set
+  -- x ∈O xs = AnyO (λ y → x ≡ y) xs
 
-  flatten-lemma : ∀ {l u n} (t : Tree l u n) → ∀ z → (z ∈O flatten t) ↔ (z ∈T t)
-  flatten-lemma (empty _) z = Empty □
-  flatten-lemma (2-node x lx xu) z =
-    (z ∈O (x ⇒ flatten lx ++ flatten xu)) ↔⟨ {!AnyO-++!} ⟩
-    (z ≡ x ⊎ z ∈O flatten lx ⊎ x ∈O flatten xu)                       ↔⟨ {!!} ⟩
-    (z ≡ x ⊎ z ∈T lx ⊎ z ∈T xu) □
-  flatten-lemma (3-node x y t t₁ t₂) z = {!!}
+  -- flatten-lemma : ∀ {l u n} (t : Tree l u n) → ∀ z → (z ∈O flatten t) ↔ (z ∈T t)
+  -- flatten-lemma (empty _) z = Empty □
+  -- flatten-lemma (2-node x lx xu) z =
+  --   (z ∈O (x ⇒ flatten lx ++ flatten xu)) ↔⟨ {!AnyO-++ {!!}!} ⟩
+  --   (z ≡ x ⊎ z ∈O flatten lx ⊎ x ∈O flatten xu)                       ↔⟨ {!!} ⟩
+  --   (z ≡ x ⊎ z ∈T lx ⊎ z ∈T xu) □
+  -- flatten-lemma (3-node x y t t₁ t₂) z = {!!}
 
 \end{code}
