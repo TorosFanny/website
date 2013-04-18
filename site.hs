@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 import           Data.Monoid ((<>))
 import           Hakyll
-import           LiterateAgda
+import           Hakyll.Web.Agda
 
 main :: IO ()
 main =
