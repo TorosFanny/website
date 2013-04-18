@@ -479,10 +479,6 @@ module Nat where
 The definition for naturals is the usual one---the pragmas are there so that we
 can use number literals.
 
-\begin{code}
-
-\end{code}
-
 Now for our ordering relation.  Every number is greater or equal than zero, and
 if `x ≤ y` then `x + 1 ≤ y + 1`:
 
