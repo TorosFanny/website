@@ -1,5 +1,7 @@
--- Parts of the code are taken from the Agda.Interaction.Highlighting.HTML
--- module of Agda.
+-- Parts of the code (specifically parts of `pairPositions' and `groupLiterate')
+-- are taken from the Agda.Interaction.Highlighting.HTML module of Agda, see
+-- <http://code.haskell.org/Agda/LICENSE> for the license and the copyright
+-- information for that code.
 module Hakyll.Web.Agda
     ( markdownAgda
     , pandocAgdaCompilerWith
