@@ -17,6 +17,10 @@ a:visited {
     color: black;
 }
 
+.interesting {
+    font-weight: bold;
+}
+
 div {
     width: 100%;
     margin: 0;
