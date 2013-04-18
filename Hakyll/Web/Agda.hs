@@ -1,6 +1,6 @@
 -- Parts of the code are taken from the Agda.Interaction.Highlighting.HTML
 -- module of Agda.
-module LiterateAgda
+module Hakyll.Web.Agda
     ( markdownAgda
     , pandocAgdaCompilerWith
     , pandocAgdaCompiler
@@ -156,6 +156,9 @@ isAgda :: Item a -> Bool
 isAgda i = ex == ".lagda"
   where ex = snd . splitExtension . toFilePath . itemIdentifier $ i
 
+saveDir :: IO a -> IO a
+saveDir m = do origDir <- getCurrentDirectory; m <* setCurrentDirectory origDir
+
 pandocAgdaCompilerWith :: ReaderOptions -> WriterOptions -> CommandLineOptions
                        -> Compiler (Item String)
 pandocAgdaCompilerWith ropt wopt aopt =
@@ -163,17 +166,15 @@ pandocAgdaCompilerWith ropt wopt aopt =
        if isAgda i
           then cached cacheName $
                do fp <- getResourceFilePath
-               -- TODO get rid of the unsafePerformIO, and have a more solid way
-               -- of getting the absolute path
-                  unsafeCompiler $
+                  -- TODO get rid of the unsafePerformIO, and have a more solid
+                  -- way of getting the absolute path
+                  unsafeCompiler . saveDir $
                       do -- We set to the directory of the file, we assume that
                          -- the agda files are in one flat directory which might
                          -- not be not the one where Hakyll is ran in.
-                         origDir <- getCurrentDirectory
                          abfp <- canonicalizePath fp
                          setCurrentDirectory (dropFileName abfp)
                          s <- markdownAgda aopt "Agda" abfp
-                         setCurrentDirectory origDir
                          let i' = i {itemBody = s}
                          return (writePandocWith wopt (readMarkdown ropt <$> i'))
           else pandocCompilerWith ropt wopt
