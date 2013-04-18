@@ -1,8 +1,3 @@
----
-title: Agda by Example: Sorting
-date: 2013-04-01
----
-
 ## Agda?
 
 The Haskell programmer is used to the pleasure of collaborating with a nice type
