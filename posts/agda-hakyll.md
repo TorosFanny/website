@@ -14,7 +14,7 @@ non-code in the literate file as Markdown.
 
 The code works but has some rough edges:
 
-* The Agda files must be a top level module.
+* The Agda files must be top level modules.
 * An Agda interface file will be generated along the original literate file, so
   you must tell Hakyll to ignore said interface files (which end in `.agdai`).
 * Hakyll metadata is not 'filtered out', so it's better to include it as a

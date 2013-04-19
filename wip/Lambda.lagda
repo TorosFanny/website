@@ -36,28 +36,67 @@ library](http://wiki.portal.chalmers.se/agda/pmwiki.php?n=Libraries.StandardLibr
   Haskell programmer.  We hide two of them because they would conflict with the
   names we will be defining.
 
+Since some people complained about Agda material defining everything from zero,
+I want to point out that a lot of the accessories that we will define are
+present in the standard library.  However they are usually defined in a much
+more general way, which can be confusing for beginners.  Moreover part of this
+tutorial is to showcase those structures in the first place.
+
 ## Indexing things
 
-\begin{code}
-data _∈_ {A : Set} : A → List A → Set where
-  here  : ∀ {x l}           → x ∈ (x ∷ l)
-  there : ∀ {x l y} → x ∈ l → x ∈ (y ∷ l)
+Referring to elements in lists is quite painful in Haskell and in programming at
+large.  We would often like a way to store 'pointers' that are guaranteed to be
+in the list, or guarantee in other ways that what we are looking up is indeed
+present.
 
+In Agda this can be easily achieved using an inductive family:
+
+\begin{code}
+data _∈_ {A : Set} (x : A) : List A → Set where
+  here  : ∀ {l}           → x ∈ (x ∷ l)
+  there : ∀ {l y} → x ∈ l → x ∈ (y ∷ l)
+\end{code}
+
+The `here` constructor creates evidence that the element we are indexing is at
+the head of the list.  Otherwise, if we know that `x` is already in `xs`, we can
+construct evidence that `x` will also be in `y ∷ xs`, for any `y`, with the
+`there` constructor.  Note that there is no case where the `List` index of `_∈_`
+is an empty list, which makes sense given the fact that empty lists contain no
+elements.
+
+We can recover a numeric index from our fancy `∈`:
+
+\begin{code}
 index : ∀ {A} {x : A} {xs} → x ∈ xs → ℕ
 index here      = zero
 index (there p) = suc (index p)
+\end{code}
 
+We also want to define a `lookup` function that tries to get then `n`th element
+of a list, if `n` is less then the list length, and fails otherwise recording
+how 'off' we were.  First we define a family representing what kind of thing
+this function will return:
+
+\begin{code}
 data Lookup {A : Set} (xs : List A) : ℕ → Set where
-  inside  : (x : A)(p : x ∈ xs) → Lookup xs (index p)
+  inside  : (x : A) (p : x ∈ xs) → Lookup xs (index p)
   outside : (m : ℕ) → Lookup xs (length xs + m)
+\end{code}
 
+If the `n` is within bounds, then we will return the corresponding element (`x`)
+and evidence that it is in the list (`p`).  If the `n` is out of bounds, we
+return an `m` such that `length xs + m = n`.
+
+\begin{code}
 lookup : {A : Set} (xs : List A) (n : ℕ) → Lookup xs n
 lookup []       n    = outside n
 lookup (x ∷ xs) zero = inside x here
 lookup (x ∷ xs) (suc n) with lookup xs n
 lookup (x ∷ xs) (suc .(index p))       | inside y p = inside y (there p)
 lookup (x ∷ xs) (suc .(length xs + n)) | outside n  = outside n
+\end{code}
 
+\begin{code}
 infixr 30 _⇒_
 data Type : Set where
   nat : Type
