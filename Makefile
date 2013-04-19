@@ -1,5 +1,5 @@
 
-all: site cv/cv.html cv/cv.pdf cv/cv.txt
+all: site cv/cv.html cv/cv.pdf cv/cv.txt package
 	./site build
 
 site:
@@ -20,7 +20,14 @@ cv/cv.pdf: cv/cv-nofmts.html
 plaintext:
 	ghc --make plaintext.hs
 
+package:
+	cabal configure
+	cabal build
+
 clean: site
 	./site clean
-	rm -f *.o *.hi
+	cabal clean
+	find . -name ".o" | xargs rm -f
+	find . -name ".hi" | xargs rm -f
+	find . -name ".lagda" | xargs rm -f
 	rm -f site cv/cv.html cv/cv-nofmts.html cv/cv.txt cv/cv.pdf plaintext
