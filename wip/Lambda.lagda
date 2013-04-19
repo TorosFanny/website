@@ -58,17 +58,13 @@ _ ⇒ _ ≟ _  ⇒ _  | _   | _   = no
 --------------------------------------------------------------------------------
 -- Raw terms
 
-mutual
-  infixl 80 _$_
-  data Raw↑ : Set where
-    var   : ℕ → Raw↑
-    const : ℕ → Raw↑
-    _⊕_   : Raw↓ → Raw↓ → Raw↑
-    _$_   : Raw↑ → Raw↓ → Raw↑
-
-  data Raw↓ : Set where
-    lam : Raw↓ → Raw↓
-    inf : Raw↑ → Raw↓
+infixl 80 _$_
+data Raw : Set where
+  var   : ℕ → Raw
+  const : ℕ → Raw
+  _⊕_   : Raw → Raw → Raw
+  _$_   : Raw → Raw → Raw
+  lam   : Type → Raw → Raw
 
 
 --------------------------------------------------------------------------------
@@ -76,52 +72,47 @@ mutual
 
 Ctx = List Type
 
-mutual
-  data Term↑ (Γ : Ctx) : Type → Set where
-    var   : ∀ {τ} → τ ∈ Γ → Term↑ Γ τ
-    const : ℕ → Term↑ Γ nat
-    _⊕_   : Term↓ Γ nat → Term↓ Γ nat → Term↑ Γ nat
-    _$_   : ∀ {σ τ} → Term↑ Γ (σ ⇒ τ) → Term↓ Γ σ → Term↑ Γ τ
+data Term (Γ : Ctx) : Type → Set where
+  var   : ∀ {τ} → τ ∈ Γ → Term Γ τ
+  const : ℕ → Term Γ nat
+  _⊕_   : Term Γ nat → Term Γ nat → Term Γ nat
+  _$_   : ∀ {σ τ} → Term Γ (σ ⇒ τ) → Term Γ σ → Term Γ τ
+  lam   : ∀ σ {τ} → Term (σ ∷ Γ) τ → Term Γ (σ ⇒ τ)
 
-  data Term↓ (Γ : Ctx) : Type → Set where
-    lam : ∀ σ {τ} → Term↓ (σ ∷ Γ) τ → Term↓ Γ (σ ⇒ τ)
-
-mutual
-  erase↑ : ∀ {Γ τ} → Term↑ Γ τ → Raw↑
-  erase↑ (var v) = var (index v)
-  erase↑ (const n) = const n
-  erase↑ (t ⊕ u) = {!erase↓ t ⊕ erase↓ u!}
-  erase↑ (t $ u) = {!!}
-
-  erase↓ : ∀ {Γ τ} → Term↓ Γ τ → Raw↓
-  erase↓ 
-
--- data Infer (Γ : Ctx) : Raw↑ → Set where
---   ok  : (τ : Type) (t : Term Γ τ) → Infer Γ (erase t)
---   bad : {e : Raw↑} → Infer Γ e
+erase : ∀ {Γ τ} → Term Γ τ → Raw
+erase (var x) = var (index x)
+erase (const n) = const n
+erase (t ⊕ u) = erase t ⊕ erase u
+erase (t $ u) = erase t $ erase u
+erase (lam σ t) = lam σ (erase t)
 
 
--- infer : (Γ : Ctx) (e : Raw) → Infer Γ e
+data Infer (Γ : Ctx) : Raw → Set where
+  ok  : (τ : Type) (t : Term Γ τ) → Infer Γ (erase t)
+  bad : {e : Raw} → Infer Γ e
 
--- infer Γ (var n) with            lookup Γ n
--- infer Γ (var .(length Γ + n)) | outside n  = bad
--- infer Γ (var .(index x))      | inside σ x = ok σ (var x)
 
--- infer Γ (const n) = ok nat (const n)
+infer : (Γ : Ctx) (e : Raw) → Infer Γ e
 
--- infer Γ (t ⊕ u) with                infer Γ t | infer Γ u
--- infer Γ (.(erase t) ⊕ .(erase u)) | ok nat t  | ok nat u = ok nat (t ⊕ u)
--- infer Γ (_ ⊕ _)                   | _         | _        = bad
+infer Γ (var n) with            lookup Γ n
+infer Γ (var .(length Γ + n)) | outside n  = bad
+infer Γ (var .(index x))      | inside σ x = ok σ (var x)
 
--- infer Γ (t $ u) with                infer Γ t    | infer Γ u
--- infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok σ′ u with σ ≟ σ′
--- infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok .σ u | yes = ok τ (t $ u)
--- infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok σ′ u | no  = bad
--- infer Γ (.(erase t) $ u)          | ok _ t       | _       = bad
--- infer Γ (_ $ _)                   | bad          | _       = bad
+infer Γ (const n) = ok nat (const n)
 
--- infer Γ (lam σ e) with       infer (σ ∷ Γ) e
--- infer Γ (lam σ .(erase t)) | ok τ t = ok (σ ⇒ τ) (lam σ t)
--- infer Γ (lam σ e)          | bad    = bad
+infer Γ (t ⊕ u) with                infer Γ t | infer Γ u
+infer Γ (.(erase t) ⊕ .(erase u)) | ok nat t  | ok nat u = ok nat (t ⊕ u)
+infer Γ (_ ⊕ _)                   | _         | _        = bad
+
+infer Γ (t $ u) with                infer Γ t    | infer Γ u
+infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok σ′ u with σ ≟ σ′
+infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok .σ u | yes = ok τ (t $ u)
+infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok σ′ u | no  = bad
+infer Γ (.(erase t) $ u)          | ok _ t       | _       = bad
+infer Γ (_ $ _)                   | bad          | _       = bad
+
+infer Γ (lam σ e) with       infer (σ ∷ Γ) e
+infer Γ (lam σ .(erase t)) | ok τ t = ok (σ ⇒ τ) (lam σ t)
+infer Γ (lam σ e)          | bad    = bad
 
 \end{code}
