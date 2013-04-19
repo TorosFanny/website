@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
+import           Control.Monad (filterM)
 import           Data.Monoid ((<>))
+
+import           Agda.Interaction.Options (CommandLineOptions(..), defaultOptions)
 import           Hakyll
 import           Hakyll.Web.Agda
-import           Agda.Interaction.Options (CommandLineOptions(..), defaultOptions)
-import           Agda.Utils.FileName (mkAbsolute)
 
 main :: IO ()
 main =
@@ -55,10 +57,18 @@ postCtx = dateField "date" "%B %e, %Y" <> defaultContext
 
 postList :: ([Item String] -> Compiler [Item String]) -> Compiler String
 postList sortFilter =
-    do posts   <- sortFilter =<< loadAll "posts/*"
+    do posts   <- filterM isPublished =<< sortFilter =<< loadAll "posts/*"
        itemTpl <- loadBody "templates/post-item.html"
        list    <- applyTemplateList itemTpl postCtx posts
        return list
+
+isPublished :: MonadMetadata m => Item a -> m Bool
+isPublished (itemIdentifier -> ident) =
+    do publishedM <- getMetadataField ident "published"
+       case publishedM of
+           Nothing      -> return True
+           Just "false" -> return False
+           Just s       -> fail ("invalid `published' metadata value: " ++ s)
 
 renderFeed
     :: (FeedConfiguration -> Context String -> [Item String] -> Compiler (Item String))
