@@ -45,9 +45,9 @@ tutorial is to showcase those structures in the first place.
 ## Indexing things
 
 Referring to elements in lists is quite painful in Haskell and in programming at
-large.  We would often like a way to store 'pointers' that are guaranteed to be
-in the list, or guarantee in other ways that what we are looking up is indeed
-present.
+large.  We would often like a way to store 'references' to elements that are
+known to be in the list, or guarantee in other ways that what we are looking up
+is indeed present.
 
 In Agda this can be easily achieved using an inductive family:
 
@@ -59,7 +59,7 @@ data _∈_ {A : Set} (x : A) : List A → Set where
 
 The `here` constructor creates evidence that the element we are indexing is at
 the head of the list.  Otherwise, if we know that `x` is already in `xs`, we can
-construct evidence that `x` will also be in `y ∷ xs`, for any `y`, with the
+construct evidence that `x` will also be in `y ∷ xs` for any `y`, with the
 `there` constructor.  Note that there is no case where the `List` index of `_∈_`
 is an empty list, which makes sense given the fact that empty lists contain no
 elements.
@@ -84,8 +84,8 @@ data Lookup {A : Set} (xs : List A) : ℕ → Set where
 \end{code}
 
 If the `n` is within bounds, then we will return the corresponding element (`x`)
-and evidence that it is in the list (`p`).  If the `n` is out of bounds, we
-return an `m` such that `length xs + m = n`.
+and evidence that it is in the list (`p`), while stating that `n = index p`.  If
+the `n` is out of bounds, we return an `m` such that `length xs + m = n`.
 
 \begin{code}
 lookup : {A : Set} (xs : List A) (n : ℕ) → Lookup xs n
