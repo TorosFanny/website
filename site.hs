@@ -2,6 +2,8 @@
 import           Data.Monoid ((<>))
 import           Hakyll
 import           Hakyll.Web.Agda
+import           Agda.Interaction.Options (CommandLineOptions(..), defaultOptions)
+import           Agda.Utils.FileName (mkAbsolute)
 
 main :: IO ()
 main =
@@ -14,9 +16,12 @@ main =
        match "templates/*" $ compile templateCompiler
 
        -- Posts
+       let agdaComp = pandocAgdaCompilerWith defaultHakyllReaderOptions
+                                             defaultHakyllWriterOptions
+                                             agdaOpts
        match ("posts/*.md" .||. "posts/*.lagda" .||. "posts/*.lhs") $
            do route $ setExtension "html"
-              compile $ pandocAgdaCompiler                                    >>=
+              compile $ agdaComp                                              >>=
                         loadAndApplyTemplate "templates/post.html"    postCtx >>=
                         saveSnapshot "content"                                >>=
                         loadAndApplyTemplate "templates/default.html" postCtx >>=
@@ -73,3 +78,6 @@ feedConf = FeedConfiguration
     , feedAuthorEmail = "f@mazzo.li"
     , feedRoot        = "http://mazzo.li"
     }
+
+agdaOpts :: CommandLineOptions
+agdaOpts = defaultOptions {optIncludeDirs = Left [".", "/home/bitonic/src/agda-lib/src"]}
