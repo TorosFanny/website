@@ -46,7 +46,7 @@ tutorial is to showcase those structures in the first place.
 
 Referring to elements in lists is quite painful in Haskell and in programming at
 large.  We would often like a way to store 'references' to elements that are
-known to be in the list, or guarantee in other ways that what we are looking up
+known too be in the list, or guarantee in other ways that what we are looking up
 is indeed present.
 
 In Agda this can be easily achieved using an inductive family:
@@ -89,12 +89,45 @@ the `n` is out of bounds, we return an `m` such that `length xs + m = n`.
 
 \begin{code}
 lookup : {A : Set} (xs : List A) (n : ℕ) → Lookup xs n
+\end{code}
+
+The cases when the list is empty is straight forward---every index will be to
+big for an empty list, and the offset is the number itself: `length [] + n = n`.
+
+\begin{code}
 lookup []       n    = outside n
+\end{code}
+
+If the index is `zero` and the list is not empty, we are in luck: the element we
+are looking for is at the head of the list, and we can return evidence using
+`here`.
+
+\begin{code}
 lookup (x ∷ xs) zero = inside x here
+\end{code}
+
+Otherwise, the recursive case: we keep looking up in the tail of the list,
+taking the predecessor of the number as new index.  If we do find something,
+then we return evidence using `there`.  If we didn't, we propagate the failure.
+
+\begin{code}
 lookup (x ∷ xs) (suc n) with lookup xs n
 lookup (x ∷ xs) (suc .(index p))       | inside y p = inside y (there p)
-lookup (x ∷ xs) (suc .(length xs + n)) | outside n  = outside n
+lookup (x ∷ xs) (suc .(length xs + m)) | outside m  = outside m
 \end{code}
+
+Something interesting is happening here: when using `with` and pattern matching
+on an inhabitant of an inductive family, we gain information on the indices of
+said family.  Given the definition of `Lookup`, when matching `inside` we know
+that `n` must be the index of the returned evidence.  With `outside`, we know
+that `n` must be the length of the list plus an offset.  This new knowledge can
+be exploited using 'dotted patterns', which express the fact that a certain term
+on the left hand side of a definition *must* be of a certain shape, given the
+information gained thanks to pattern matching elsewhere.  Even if in this case
+this doesn't seem that useful, it is a very convenient device, as we will see
+shortly.
+
+## Simple types and raw terms
 
 \begin{code}
 infixr 30 _⇒_
@@ -114,9 +147,6 @@ _ ⇒ _ ≟ nat   = no
 σ ⇒ τ ≟ .σ ⇒ .τ | yes | yes = yes
 _ ⇒ _ ≟ _  ⇒ _  | _   | _   = no
 
---------------------------------------------------------------------------------
--- Raw terms
-
 infixl 80 _$_
 data Raw : Set where
   var   : ℕ → Raw
@@ -124,11 +154,11 @@ data Raw : Set where
   _⊕_   : Raw → Raw → Raw
   _$_   : Raw → Raw → Raw
   lam   : Type → Raw → Raw
+\end{code}
 
+## Typed terms, and type inference
 
---------------------------------------------------------------------------------
--- Typed terms
-
+\begin{code}
 Ctx = List Type
 
 data Term (Γ : Ctx) : Type → Set where
@@ -144,7 +174,6 @@ erase (const n) = const n
 erase (t ⊕ u) = erase t ⊕ erase u
 erase (t $ u) = erase t $ erase u
 erase (lam σ t) = lam σ (erase t)
-
 
 data Infer (Γ : Ctx) : Raw → Set where
   ok  : (τ : Type) (t : Term Γ τ) → Infer Γ (erase t)
@@ -167,10 +196,11 @@ infer Γ (_ $ _)                   | bad          | _       = bad
 infer Γ (lam σ e) with       infer (σ ∷ Γ) e
 infer Γ (lam σ .(erase t)) | ok τ t = ok (σ ⇒ τ) (lam σ t)
 infer Γ (lam σ e)          | bad    = bad
+\end{code}
 
---------------------------------------------------------------------------------
--- Embedding of types and terms
+## Embedding terms
 
+\begin{code}
 ⟦_⟧ : Type → Set
 ⟦ nat   ⟧ = ℕ
 ⟦ σ ⇒ τ ⟧ = ⟦ σ ⟧ → ⟦ τ ⟧
@@ -190,7 +220,11 @@ env [ const n ] = n
 env [ t ⊕ u   ] = env [ t ] + env [ u ]
 env [ t $ u   ] = (env [ t ]) (env [ u ])
 env [ lam _ t ] = λ x → (x ◁ env) [ t ]
+\end{code}
 
+## Constant folding
+
+\begin{code}
 --------------------------------------------------------------------------------
 -- Simple constant folding, plus a proof that the operation preserves the
 -- denotation.  Note that we mix proof and folding because this makes the proof
@@ -219,5 +253,4 @@ cfold′ (t ⊕ u) with cfold′ t | cfold′ u
 
 cfold : ∀ {Γ σ} → Term Γ σ → Term Γ σ
 cfold = result ∘ cfold′
-
 \end{code}
