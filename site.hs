@@ -76,7 +76,7 @@ renderFeed
 renderFeed f =
     do route idRoute
        compile $ do let feedCtx = postCtx <> bodyField "description"
-                    posts <- fmap (take 10) . recentFirst =<<
+                    posts <- fmap (take 10) . recentFirst =<< filterM isPublished =<<
                              loadAllSnapshots "posts/*" "content"
                     f feedConf feedCtx posts
 
