@@ -83,14 +83,14 @@ groupLiterate = begin
                _ : rest' -> end rest'
 
     end []  = []
-    end mis = let (a, b) = span (notCode endCode) mis
-              in Right a :
+    end mis = let (code, rest) = span (notCode endCode) mis
+              in Right code :
                  -- If there's nothing between \end{code} and \begin{code}, we
                  -- start consuming code again.
-                 case b of
-                     []                                 -> error "malformed file"
-                     ((_, s, mi) : b') | beginCode s mi -> end b'
-                     (_          : b')                  -> begin b'
+                 case rest of
+                     []                                    -> error "malformed file"
+                     ((_, s, mi) : code') | beginCode s mi -> end code'
+                     (_          : com)                    -> begin com
 
     notCode f (_, s, mi) = not (f s mi)
 
