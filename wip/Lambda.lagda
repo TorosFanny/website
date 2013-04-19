@@ -1,3 +1,17 @@
+In the [previous Agda example](/posts/AgdaSort.html) we saw how we can approach
+the task of verifying a sorting function.  This time, we are going to write a
+type checker for the simply typed λ-calculus, plus a simple optimization on said
+terms that we will prove correct.  As in the other post the bulk of the thinking
+has been done by other people: I took the type checking part from [Ulf Norell's
+Agda tutorial](http://www.cse.chalmers.se/~ulfn/papers/afp08/tutorial.pdf), and
+the term transformation example from [Adam Chlipala's Coq book 'Certified
+Programming with Dependent Types'](http://adam.chlipala.net/cpdt/).  They are
+both great, go read them if you have time!
+
+Let's get started.
+
+## Useful imports
+
 \begin{code}
 module Lambda where
 
@@ -5,10 +19,26 @@ open import Data.Nat using (ℕ; zero; suc; _+_)
 open import Data.List using (List; []; _∷_; length)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; cong₂)
 open import Function hiding (_$_; const)
+\end{code}
 
---------------------------------------------------------------------------------
--- List utilities
+After the module declaration, we include some useful modules from the [Agda
+standard
+library](http://wiki.portal.chalmers.se/agda/pmwiki.php?n=Libraries.StandardLibrary):
 
+* `Data.Nat` defines natural numbers, we only import the type (`ℕ`) and
+  constructors (`zero` and `suc`), and the addition operator.
+* `Data.List` defines finite lists, again we import type and constructors, plus
+  `length`.
+* `Relation.Binary.PropositionalEquality` defines propositional equality as
+  [presented](/posts/AgdaSort.html#propositional-equality) in the previous post.
+  `cong₂` is the two-argument version of `cong`.
+* `Function` exports some common utilities that should be familiar to the
+  Haskell programmer.  We hide two of them because they would conflict with the
+  names we will be defining.
+
+## Indexing things
+
+\begin{code}
 data _∈_ {A : Set} : A → List A → Set where
   here  : ∀ {x l}           → x ∈ (x ∷ l)
   there : ∀ {x l y} → x ∈ l → x ∈ (y ∷ l)
@@ -21,16 +51,12 @@ data Lookup {A : Set} (xs : List A) : ℕ → Set where
   inside  : (x : A)(p : x ∈ xs) → Lookup xs (index p)
   outside : (m : ℕ) → Lookup xs (length xs + m)
 
-lookup : {A : Set}(xs : List A)(n : ℕ) → Lookup xs n
+lookup : {A : Set} (xs : List A) (n : ℕ) → Lookup xs n
 lookup []       n    = outside n
 lookup (x ∷ xs) zero = inside x here
 lookup (x ∷ xs) (suc n) with lookup xs n
 lookup (x ∷ xs) (suc .(index p))       | inside y p = inside y (there p)
 lookup (x ∷ xs) (suc .(length xs + n)) | outside n  = outside n
-
-
---------------------------------------------------------------------------------
--- Types and types equality
 
 infixr 30 _⇒_
 data Type : Set where
@@ -120,10 +146,10 @@ here       ! (x ◁ _) = x
 there x∈xs ! (_ ◁ l) = x∈xs ! l
 
 _[_] : ∀ {Γ τ} → Env Γ → Term Γ τ → ⟦ τ ⟧
-env [ var x  ]  = x ! env
+env [ var x   ] = x ! env
 env [ const n ] = n
-env [ t ⊕ u ]   = env [ t ] + env [ u ]
-env [ t $ u ]   = (env [ t ]) (env [ u ])
+env [ t ⊕ u   ] = env [ t ] + env [ u ]
+env [ t $ u   ] = (env [ t ]) (env [ u ])
 env [ lam _ t ] = λ x → (x ◁ env) [ t ]
 
 --------------------------------------------------------------------------------
