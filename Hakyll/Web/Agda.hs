@@ -78,22 +78,14 @@ groupLiterate = begin
     begin contents =
         let (com, rest) = span (notCode beginCode) contents
         in Left ("\n\n" ++ concat [s | (_, s, _) <- com] ++ "\n\n") :
-           trimTop (end rest)
+           case rest of
+               []        -> []
+               _ : rest' -> end rest'
 
     end []  = []
-    end mis =
-        case span (notCode endCode) mis of
-            (a, e : b) -> Right (a ++ [trimEnd e]) : begin b
-            _          -> error "malformed file"
+    end mis = let (a, b) = span (notCode endCode) mis in Right a : begin (tail b)
 
-    notCode :: (String -> MetaInfo -> Bool) -> (Integer, String, MetaInfo) -> Bool
     notCode f (_, s, mi) = not (f s mi)
-
-    trimTop (Right ((pos, s, mi) : rs) : rest) =
-        Right ((pos, dropWhile isSpace s, mi) : rs) : rest
-    trimTop x = x
-
-    trimEnd (pos, s, mi) = (pos, reverse (dropWhile isSpace (reverse s)), mi)
 
 annotate :: TopLevelModuleName -> Integer -> MetaInfo -> Html -> Html
 annotate m pos mi = anchor ! attributes
