@@ -1,3 +1,8 @@
+/* Adapted from `src/data/Agda.css' from the Agda package, see
+   <http://code.haskell.org/Agda/LICENSE> for the license and the copyright
+   information.
+*/
+
 /* Aspects. */
 pre.Agda a.Comment       { color: #B22222 }
 pre.Agda a.Keyword       { color: #CD6600 }
