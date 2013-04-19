@@ -38,13 +38,13 @@ data Type : Set where
   _⇒_ : Type → Type → Type
 
 data Equal? : Type → Type → Set where
-  yes : ∀ {τ} → Equal? τ τ
+  yes : ∀ {τ}   → Equal? τ τ
   no  : ∀ {σ τ} → Equal? σ τ
 
 _≟_ : (σ τ : Type) → Equal? σ τ
-nat ≟ nat = yes
-nat ≟ _ ⇒ _ = no
-_ ⇒ _ ≟ nat = no
+nat   ≟ nat   = yes
+nat   ≟ _ ⇒ _ = no
+_ ⇒ _ ≟ nat   = no
 σ ⇒ τ ≟ σ′ ⇒ τ′ with σ ≟ σ′ | τ ≟ τ′
 σ ⇒ τ ≟ .σ ⇒ .τ | yes | yes = yes
 _ ⇒ _ ≟ _  ⇒ _  | _   | _   = no
@@ -120,10 +120,10 @@ here       ! (x ◁ _) = x
 there x∈xs ! (_ ◁ l) = x∈xs ! l
 
 _[_] : ∀ {Γ τ} → Env Γ → Term Γ τ → ⟦ τ ⟧
-env [ var x  ] = x ! env
+env [ var x  ]  = x ! env
 env [ const n ] = n
-env [ t ⊕ u ] = env [ t ] + env [ u ]
-env [ t $ u ] = (env [ t ]) (env [ u ])
+env [ t ⊕ u ]   = env [ t ] + env [ u ]
+env [ t $ u ]   = (env [ t ]) (env [ u ])
 env [ lam _ t ] = λ x → (x ◁ env) [ t ]
 
 --------------------------------------------------------------------------------
@@ -134,25 +134,25 @@ env [ lam _ t ] = λ x → (x ◁ env) [ t ]
 -- yeee
 postulate ext : ∀ {A B : Set} {f g : A → B} → ((x : A) → f x ≡ g x) → f ≡ g
 
-record Opt {Γ σ} (t : Term Γ σ) : Set where
-  constructor opt
+record Transformation {Γ σ} (t : Term Γ σ) : Set where
+  constructor trans
   field
-    newTerm         : Term Γ σ
-    equalDenotation : ∀ {c} → c [ t ] ≡ c [ newTerm ]
-open Opt
+    result    : Term Γ σ
+    preserves : ∀ {c} → c [ t ] ≡ c [ result ]
+open Transformation
 
-cfold′ : ∀ {Γ σ} → (t : Term Γ σ) → Opt t
-cfold′ (var v) = opt (var v) refl
-cfold′ (const n) = opt (const n) refl
+cfold′ : ∀ {Γ σ} → (t : Term Γ σ) → Transformation t
+cfold′ (var v) = trans (var v) refl
+cfold′ (const n) = trans (const n) refl
 cfold′ (t $ u) with cfold′ t | cfold′ u
-... | opt t′ p | opt u′ q = opt (t′ $ u′) (cong₂ (λ x y → x y) p q)
+... | trans t′ p | trans u′ q = trans (t′ $ u′) (cong₂ (λ x y → x y) p q)
 cfold′ (lam σ t) with cfold′ t
-... | opt t′ p = opt (lam σ t′) (ext (λ x → p))
+... | trans t′ p = trans (lam σ t′) (ext (λ x → p))
 cfold′ (t ⊕ u) with cfold′ t | cfold′ u
-... | opt (const n) p | opt (const m) q = opt (const (n + m)) (cong₂ _+_ p q)
-... | opt t′        p | opt u′        q = opt (t′ ⊕ u′)       (cong₂ _+_ p q)
+... | trans (const n) p | trans (const m) q = trans (const (n + m)) (cong₂ _+_ p q)
+... | trans t′        p | trans u′        q = trans (t′ ⊕ u′)       (cong₂ _+_ p q)
 
 cfold : ∀ {Γ σ} → Term Γ σ → Term Γ σ
-cfold = newTerm ∘ cfold′
+cfold = result ∘ cfold′
 
 \end{code}
