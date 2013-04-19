@@ -21,7 +21,7 @@ source-repository head
 
 Library
     Build-Depends:    base >= 3 && < 5,
-                      hakyll >= 4.2 && < 5,
+                      hakyll >= 4.2.2 && < 5,
                       Agda >= 2.3 && < 3,
                       pandoc >= 1.10 && < 2,
                       xhtml >= 3000.2 && < 3000.3,

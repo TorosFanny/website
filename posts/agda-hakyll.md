@@ -19,6 +19,10 @@ The code works but has some rough edges:
   you must tell Hakyll to ignore said interface files (which end in `.agdai`).
 * Hakyll metadata is not 'filtered out', so it's better to include it as a
   separate `.metadata` file.
+* Only links internal to the file will be generated.  Cross links between blog
+  posts of the same site could easily be achieved.
+* The generated code is in a `pre.Agda` block.  A css file (`css/agda.css`)
+  adapted from the one distributed with Agda, is provided in the package.
 
 An example of the package in action can be found in the
 [Haskell code](https://github.com/bitonic/website) that generates this website,
@@ -28,6 +32,7 @@ main generator and
 (and the respective metadata file) is a literate Agda file that generates the
 post mentioned before.
 
-**Important note**: the code currently released relies on a function available
-in the development version of Hakyll.  You can either wait for the new version,
-or `cabal install` from the [git repo](https://github.com/jaspervdj/hakyll).
+**Important note**: the code currently released relies on a function only
+available in the development version of Hakyll.  You can either wait for the new
+version, or `cabal install` from the
+[git repo](https://github.com/jaspervdj/hakyll).
