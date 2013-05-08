@@ -85,11 +85,12 @@ foldr f b (a ∷ as) = f a (foldr f b as)
 Nothing surprising here, apart from the fact that in the type signature we have
 to take the trouble of bringing the type variables into scope manually.  In
 Agda, parameters in curly braces are implicit and the type checker will try to
-infer them by unification.  This procedure can fail---type inference is
-undecidable---in which case the implicits can be explicitly provided, also with
-curly braces.  Here we are also omitting the type of the parameter `A` by using
-`∀`.  We can do this since `A` appears as an argument to `List` later in the
-signature.  For the converse reason we must provide a type for `B`.
+infer them by unification.  This procedure can fail---term inference is
+predictably undecidable---in which case the implicits can be explicitly
+provided, also with curly braces.  Here we are also omitting the type of the
+parameter `A` by using `∀`.  We can do this since `A` appears as an argument to
+`List` later in the signature.  For the converse reason we must provide a type
+for `B`.
 
 ### Sums
 

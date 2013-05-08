@@ -2,11 +2,14 @@ In the [previous Agda example](/posts/AgdaSort.html) we saw how we can approach
 the task of verifying a sorting function.  This time, we are going to write a
 type checker for the simply typed λ-calculus, plus a simple optimization on said
 terms that we will prove correct.  As in the other post the bulk of the thinking
-has been done by other people: I took the type checking part from [Ulf Norell's
-Agda tutorial](http://www.cse.chalmers.se/~ulfn/papers/afp08/tutorial.pdf), and
-the term transformation example from [Adam Chlipala's Coq book 'Certified
+has been done by other people: I took most of the post from Ulf Norell's [Agda
+tutorial](http://www.cse.chalmers.se/~ulfn/papers/afp08/tutorial.pdf)[^depcalc],
+and the term transformation example from Adam Chlipala's Coq book ['Certified
 Programming with Dependent Types'](http://adam.chlipala.net/cpdt/).  They are
 both great, go read them if you have time!
+
+[^depcalc]: Who in turn took it from 'The View from the Left', by Conor McBride
+and James McKinna.
 
 Let's get started.
 
@@ -46,7 +49,7 @@ tutorial is to showcase those structures in the first place.
 
 Referring to elements in lists is quite painful in Haskell and in programming at
 large.  We would often like a way to store 'references' to elements that are
-known too be in the list, or guarantee in other ways that what we are looking up
+known to be in the list, or guarantee in other ways that what we are looking up
 is indeed present.
 
 In Agda this can be easily achieved using an inductive family:
@@ -60,7 +63,7 @@ data _∈_ {A : Set} (x : A) : List A → Set where
 The `here` constructor creates evidence that the element we are indexing is at
 the head of the list.  Otherwise, if we know that `x` is already in `xs`, we can
 construct evidence that `x` will also be in `y ∷ xs` for any `y`, with the
-`there` constructor.  Note that there is no case where the `List` index of `_∈_`
+`there` constructor.  Note that there is no case where the `List` index of `∈`
 is an empty list, which makes sense given the fact that empty lists contain no
 elements.
 
