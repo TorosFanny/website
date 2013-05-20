@@ -97,7 +97,7 @@ for `B`.
 Now another 'boring' type, `Either`, plus the associated destructor (`either` in
 Haskell):
 
-\begin{code}  
+\begin{code}
 data Either (A : Set) (B : Set) : Set where
   left  : A → Either A B
   right : B → Either A B

@@ -1,6 +1,7 @@
 ---
 title: Scala's syntax
 date: 2013-03-26
+published: false
 ---
 
 I’m studying a bit of Scala.  I find the syntax even more amusing than the rest

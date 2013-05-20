@@ -170,6 +170,7 @@ pre.sourceCode, pre.Agda {
     background-color:#f3f3bb;
     margin:0.2em 0;
     padding:0.4em 0.7em;
+    overflow-y: auto;
 }
 
 table.sourceCode {
