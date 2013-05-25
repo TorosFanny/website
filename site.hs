@@ -53,7 +53,7 @@ main =
        match "cv/*" $ do route idRoute; compile copyFileCompiler
 
 postCtx :: Context String
-postCtx = dateField "date" "%B %e, %Y" <> defaultContext
+postCtx = dateField "date" "%Y-%m-%d" <> defaultContext
 
 postList :: ([Item String] -> Compiler [Item String]) -> Compiler String
 postList sortFilter =

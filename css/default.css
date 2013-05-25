@@ -78,9 +78,8 @@ div {
 
 #articles .date {
     color:#5b5b5b;
-    float:right;
     font-weight:normal;
-    padding:0 0 0 1em;
+    padding:0 0.5em 0 0;
     text-shadow: none;
 }
 
@@ -175,4 +174,17 @@ pre.sourceCode, pre.Agda {
 
 table.sourceCode {
     width:100%;
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
 }

@@ -22,14 +22,13 @@ because it's has very 'functional' slant, doing everything without recurring to
 mechanised transformation of terms (of which [Coq](http://coq.inria.fr/) is the
 most famous offender).  In this blog I will try to give some examples that will
 hopefully make you interested.  This first post explains how sorting algorithms
-can be proven correct.  The implementation is largely inspired from a
+can be proven correct.  The implementation is largely inspired by a
 [presentation](https://personal.cis.strath.ac.uk/~conor/Pivotal.pdf) by Conor
 McBride.
 
 This blog post was generated from a literate Agda file, that you can find
 [here](https://github.com/bitonic/website/blob/master/posts/AgdaSort.lagda).
-You should also be able to just copy paste and compile.  I'm not going to
-explain how to install Agda here, you can refer to the
+I'm not going to explain how to install Agda here, you can refer to the
 [wiki](http://wiki.portal.chalmers.se/agda/pmwiki.php) or the wonderful
 [freenode channel](irc://chat.freenode.net/agda).  While I go over all concepts
 presented I won't go in depth to keep things reasonably brief: this is intended
@@ -182,9 +181,9 @@ Rel X = X → X → Set
 
 The `Set₁` indicates that a relation between two `Set`s is 'larger' than a `Set`
 itself---this is nothing to worry about now, but it follows a tradition in set
-theory that goes back to Russell to avoid paradoxes[^girards].  `Set` is in
-fact a shorthand for `Set₀` and represent the type of types of values: `Empty :
-Set₀ : Set₁ : Set₂ : ...`.
+theory that goes back to Russell to avoid paradoxes[^girards].  `Set` is in fact
+a shorthand for `Set₀` and represents the type of types of values: `Empty : Set₀
+: Set₁ : Set₂ : ...`.
 
 [^girards]: In type theory this is known as Girards' paradox, you can find an
 Agda (with `Set : Set` enabled) rendition
