@@ -150,6 +150,10 @@ a {
     margin:0 0 0.2em 0;
 }
 
+#article li p {
+    text-indent: 0;
+}
+
 /* Safeguard against the background */
 
 #footer {
