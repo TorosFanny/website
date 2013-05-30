@@ -408,13 +408,13 @@ module PropositionalEquality where
     refl : ∀ {x} → x ≡ x
 \end{code}
 
-It's worth mentioned what 'equal' means here.  I have mentioned earlier that
+It's worth mentioning what 'equal' means here.  I have mentioned earlier that
 'evaluation and typechecking are intertwined': when the type checker has to
 decide if two types, or more generally two terms, are 'the same', it simply
-reduces them as far as possible (to their 'normal form') and then compares them
-syntactically, plus some additional laws[^etalaws].  Remember, every Agda term
-is terminating, so this procedure itself is guaranteed to terminate.  Thus,
-`refl : ((λ x → x) 1) ≡ 1` is acceptable, and so on.
+reduces them as far as possible (to their 'normal form') and then compares
+them syntactically, plus some additional laws[^etalaws].  Remember, every Agda
+term is terminating, so this procedure itself is guaranteed to terminate.
+Thus, `refl : ((λ x → x) 1) ≡ 1` is acceptable, and so on.
 
 [^etalaws]: For example partial applications are expanded, so that if `f : A ->
 B`, then `f ≡ λ x → f x`.  Similary, if we have a record `Tuple (A B : Set) :
