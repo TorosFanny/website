@@ -105,23 +105,27 @@ published: false
 > fps :: Int
 > fps = 30
 >
-> pushVelocity :: Point -> Point -> Vector
-> pushVelocity (v1x, v1y) (v2x, v2y) =
+> adjust :: Float -> Float -> Float
+> adjust dt x = x * dt * fromIntegral fps
+>
+> pushVelocity :: Float -> Point -> Point -> Vector
+> pushVelocity dt (v1x, v1y) (v2x, v2y) =
 >     if l > 0 -- If we are analysing the same node, l = 0
->     then (dx * 150 / l, dy * 150 / l)
+>     then (dx * weight / l, dy * weight / l)
 >     else (0, 0)
 >   where
+>     weight   = adjust dt 150
 >     (dx, dy) = (v1x - v2x, v1y - v2y)
 >     l        = 2 * (dx * dx + dy * dy)
 >
-> pullVelocity :: Int -> Point -> Point -> Vector
-> pullVelocity nedges (v1x, v1y) (v2x, v2y)= (-(dx / weight), -(dy / weight))
+> pullVelocity :: Int -> Float -> Point -> Point -> Vector
+> pullVelocity nedges dt (v1x, v1y) (v2x, v2y)= (-(dx / weight), -(dy / weight))
 >   where
 >     (dx, dy) = (v1x - v2x, v1y - v2y)
->     weight = fromIntegral (nedges + 1) * 10
+>     weight = adjust dt (fromIntegral (nedges + 1) * 10)
 >
-> updatePosition :: Vertex -> Scene -> (Bool, Point)
-> updatePosition v1 sc@Scene{ sceneGraph  = gr@Graph{graphNEdges = nedges}
+> updatePosition :: Float -> Vertex -> Scene -> (Bool, Point)
+> updatePosition dt v1 sc@Scene{ sceneGraph  = gr@Graph{graphNEdges = nedges}
 >                           , scenePoints = pts } =
 >     let (xvel, yvel) = pull push
 >     in if xvel < epsilon && yvel < epsilon
@@ -131,21 +135,21 @@ published: false
 >     v1pos@(v1x, v1y) = getPos v1 sc
 >     addVel (x, y) (x', y') = (x + x', y + y')
 >
->     push = Map.foldr' (\v2pos -> addVel (pushVelocity v1pos v2pos)) (0, 0) pts
+>     push = Map.foldr' (\v2pos -> addVel (pushVelocity dt v1pos v2pos)) (0, 0) pts
 >
 >     -- TODO use foldl'
 >     pull vel =
->         foldr (\v2pos -> addVel (pullVelocity nedges v1pos v2pos)) vel
+>         foldr (\v2pos -> addVel (pullVelocity nedges dt v1pos v2pos)) vel
 >               [getPos v2 sc | v2 <- Set.toList (vertexNeighs v1 gr)]
 
 > updatePositions :: Float -> (Bool, Scene) -> (Bool, Scene)
 > updatePositions _ (True,  sc) = (True, sc)
-> updatePositions _ (False, sc) =
+> updatePositions dt (False, sc) =
 >     go False sc (Set.toList (graphVertices (sceneGraph sc)))
 >   where
 >     go stable sc' []       = (stable, sc')
 >     go stable sc' (n : ns) =
->         let (nstable, pt ) = updatePosition n sc'
+>         let (nstable, pt ) = updatePosition dt n sc'
 >         in go (stable && nstable) (addVertex' n pt sc') ns
 
 > dummy :: Scene
