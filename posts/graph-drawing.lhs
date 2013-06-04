@@ -17,10 +17,12 @@ published: false
 > data Graph = Graph
 >     { graphVertices :: Set Vertex
 >     , graphNeighs   :: Map Vertex (Set Vertex)
+>     , graphNEdges   :: Int
 >     }
 >
 > emptyGraph :: Graph
-> emptyGraph = Graph {graphVertices = Set.empty, graphNeighs = Map.empty}
+> emptyGraph =
+>     Graph {graphVertices = Set.empty, graphNeighs = Map.empty, graphNEdges = 0}
 >
 > addVertex :: Vertex -> Graph -> Graph
 > addVertex n gr@Graph{graphVertices = nodes, graphNeighs = neighs} =
@@ -32,18 +34,20 @@ published: false
 > vertexNeighs n Graph{graphNeighs = neighs} = neighs Map.! n
 >
 > addEdge :: Edge -> Graph -> Graph
-> addEdge (n1, n2) (addVertex n1 . addVertex n2 -> gr) = gr{graphNeighs = neighs}
->   where neighs = Map.insert n1 (vertexNeighs n2 gr)
->                             (Map.insert n2 (vertexNeighs n1 gr) (graphNeighs gr))
->
-> fromEdges :: [Edge] -> Graph
-> fromEdges []                = emptyGraph
-> fromEdges (e@(n1, n2) : es) = addEdge e (addVertex n1 (addVertex n2 (fromEdges es)))
+> addEdge (n1, n2) (addVertex n1 . addVertex n2 -> gr@Graph{graphNEdges = nedges}) =
+>    gr{ graphNeighs = neighs
+>      , graphNEdges = nedges + if Set.member n2 n1neighs then 1 else 0 }
+>   where
+>     n1neighs = (vertexNeighs n1 gr)
+>     neighs = Map.insert n1 (Set.insert n2 n1neighs) $
+>              Map.insert n2 (Set.insert n1 (vertexNeighs n2 gr)) $
+>              graphNeighs gr
 >
 > graphEdges :: Graph -> Set Edge
 > graphEdges = Map.foldrWithKey' foldNeighs Set.empty . graphNeighs
 >   where
->     foldNeighs n1 ns es = Set.foldr' (\n2 -> Set.insert (order (n1, n2))) es ns
+>     foldNeighs n1 ns es =
+>         Set.foldr' (\n2 -> Set.insert (order (n1, n2))) es ns
 >     order (n1, n2) = if n1 > n2 then (n1, n2) else (n2, n1)
 >
 > data Scene = Scene
@@ -63,17 +67,17 @@ published: false
 >     if Map.member n1 pts && Map.member n2 pts
 >     then sc{sceneGraph = addEdge e gr}
 >     else error "non existant point!"
->
 
 > -- TODO use foldl'
 > fromPoints :: ([(Vertex, Point)], [Edge]) -> Scene
-> fromPoints (pts, es) = foldr addEdge' (foldr (uncurry addVertex') emptyScene pts) es
+> fromPoints (pts, es) =
+>     foldr addEdge' (foldr (uncurry addVertex') emptyScene pts) es
 >
 > getPos :: Vertex -> Scene -> Point
 > getPos n Scene{scenePoints = pts} = pts Map.! n
 
 > vertexRadius :: Float
-> vertexRadius = 6
+> vertexRadius = 3
 >
 > vertexColor :: Color
 > vertexColor = makeColor 1 0 0 1
@@ -95,31 +99,44 @@ published: false
 >     vertices = Pictures [drawVertex n sc | n <- Set.toList (graphVertices gr)]
 >     edges    = Pictures [drawEdge e sc   | e <- Set.toList (graphEdges gr)   ]
 
-> dummy :: Scene
-> dummy = fromPoints ([(1, (10, 10)), (2, (0, 0)), (3, (50, 50)), (4, (-20, -30))],
->                     [(1, 2), (2, 3), (3, 4), (4, 1)])
-
-> sceneWindow :: Scene -> IO ()
-> sceneWindow sc =
->     display (InWindow "Graph Drawing" (200, 200) (10, 10)) black (drawScene sc)
-
-> updatePosition :: Vertex -> Scene -> (Bool, Point)
-> updatePosition v1 sc@Scene{sceneGraph = gr, scenePoints = pts} = undefined
->   where
->     (v1x, v1y) = getPos v1 sc
+> epsilon :: Float
+> epsilon = 0.001
 >
->     repulsive = Map.foldr' repVel (0, 0) pts
->     repVel (v2x, v2y) (xvel, yvel) =
->         let (dx, dy) = (v1x - v2x, v1y - v2y)
->             l        = 2 * (dx * dx + dy * dy)
->         in if l > 0 -- If we are analysing the same node
->            then (xvel + (dx * 150) / l, yvel + (dy * 150) / l)
->            else (xvel, yvel)
+> fps :: Int
+> fps = 30
+>
+> pushVelocity :: Point -> Point -> Vector
+> pushVelocity (v1x, v1y) (v2x, v2y) =
+>     if l > 0 -- If we are analysing the same node, l = 0
+>     then (dx * 150 / l, dy * 150 / l)
+>     else (0, 0)
+>   where
+>     (dx, dy) = (v1x - v2x, v1y - v2y)
+>     l        = 2 * (dx * dx + dy * dy)
+>
+> pullVelocity :: Int -> Point -> Point -> Vector
+> pullVelocity nedges (v1x, v1y) (v2x, v2y)= (-(dx / weight), -(dy / weight))
+>   where
+>     (dx, dy) = (v1x - v2x, v1y - v2y)
+>     weight = fromIntegral (nedges + 1) * 10
+>
+> updatePosition :: Vertex -> Scene -> (Bool, Point)
+> updatePosition v1 sc@Scene{ sceneGraph  = gr@Graph{graphNEdges = nedges}
+>                           , scenePoints = pts } =
+>     let (xvel, yvel) = pull push
+>     in if xvel < epsilon && yvel < epsilon
+>        then (True,  (v1x, v1y))
+>        else (False, (v1x + xvel, v1y + yvel))
+>   where
+>     v1pos@(v1x, v1y) = getPos v1 sc
+>     addVel (x, y) (x', y') = (x + x', y + y')
+>
+>     push = Map.foldr' (\v2pos -> addVel (pushVelocity v1pos v2pos)) (0, 0) pts
 >
 >     -- TODO use foldl'
->     attractive vel =
->         foldr attVel vel [getPos v2 sc | v2 <- Set.toList (vertexNeighs v1 gr)]
->     attVel (v2x, v2y) (xvel, yvel) = undefined
+>     pull vel =
+>         foldr (\v2pos -> addVel (pullVelocity nedges v1pos v2pos)) vel
+>               [getPos v2 sc | v2 <- Set.toList (vertexNeighs v1 gr)]
 
 > updatePositions :: Float -> (Bool, Scene) -> (Bool, Scene)
 > updatePositions _ (True,  sc) = (True, sc)
@@ -131,5 +148,15 @@ published: false
 >         let (nstable, pt ) = updatePosition n sc'
 >         in go (stable && nstable) (addVertex' n pt sc') ns
 
+> dummy :: Scene
+> dummy = fromPoints ([(1, (10, 10)), (2, (0, 0)), (3, (50, 50)), (4, (-20, -30))],
+>                     [(1, 2), (2, 3), (3, 4), (4, 1)])
+>
+> sceneWindow :: Scene -> IO ()
+> sceneWindow sc =
+>     play (InWindow "Graph Drawing" (200, 200) (10, 10))
+>          black 30 (False, sc) (drawScene . snd) (const id) updatePositions
+>
 > main :: IO ()
-> main = undefined
+> main = sceneWindow dummy
+
