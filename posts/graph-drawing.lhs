@@ -6,8 +6,10 @@ published: false
 
 > {-# LANGUAGE ViewPatterns #-}
 > import Data.Map.Strict (Map)
+> import Control.Monad (mplus)
 > import Data.Set (Set)
 > import Graphics.Gloss
+> import Graphics.Gloss.Data.Vector
 > import Graphics.Gloss.Interface.Pure.Game
 > import qualified Data.Map.Strict as Map
 > import qualified Data.Set as Set
@@ -113,21 +115,24 @@ published: false
 > adjust :: Float -> Float -> Float
 > adjust dt x = x * dt * fromIntegral fps
 >
+> local :: Point -> Point -> Vector
+> local (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
+>
 > pushVelocity :: Float -> Point -> Point -> Vector
-> pushVelocity dt (v1x, v1y) (v2x, v2y) =
+> pushVelocity dt v1 v2 =
 >     if l > 0 -- If we are analysing the same node, l = 0
 >     then (dx * weight / l, dy * weight / l)
 >     else (0, 0)
 >   where
 >     weight   = adjust dt 150
->     (dx, dy) = (v1x - v2x, v1y - v2y)
+>     (dx, dy) = local v1 v2
 >     l        = 2 * (dx * dx + dy * dy)
 >
 > pullVelocity :: Int -> Float -> Point -> Point -> Vector
-> pullVelocity nedges dt (v1x, v1y) (v2x, v2y) =
+> pullVelocity nedges dt v1 v2 =
 >     (-(dx / weight), -(dy / weight))
 >   where
->     (dx, dy) = (v1x - v2x, v1y - v2y)
+>     (dx, dy) = local v1 v2
 >     weight = adjust dt (fromIntegral (nedges + 1) * 10)
 >
 > updatePosition :: Float -> Vertex -> Scene -> (Bool, Point)
@@ -160,8 +165,15 @@ published: false
 >                              else updatePosition dt n sc'
 >         in go (stable && nstable) (addVertex' n pt sc') ns
 >
+>
+> inCircle :: Point -> Point -> Bool
+> inCircle p center = magV (local center p) <= vertexRadius
+>
 > findVertex :: Point -> Scene -> Maybe Vertex
-> findVertex pos pts = Nothing
+> findVertex p1 (scenePoints -> pts)=
+>     Map.foldrWithKey'
+>     (\v p2 m -> m `mplus` if inCircle p1 p2 then Just v else Nothing)
+>     Nothing pts
 >
 > handleEvent :: Event -> (Bool, Scene) -> (Bool, Scene)
 > handleEvent (EventKey (MouseButton LeftButton) Down _ pos) (stable, sc) =
