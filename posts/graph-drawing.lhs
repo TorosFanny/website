@@ -8,6 +8,7 @@ published: false
 > import Data.Map.Strict (Map)
 > import Data.Set (Set)
 > import Graphics.Gloss
+> import Graphics.Gloss.Interface.Pure.Game
 > import qualified Data.Map.Strict as Map
 > import qualified Data.Set as Set
 
@@ -51,16 +52,20 @@ published: false
 >     order (n1, n2) = if n1 > n2 then (n1, n2) else (n2, n1)
 >
 > data Scene = Scene
->     { sceneGraph  :: Graph
->     , scenePoints :: Map Vertex Point
+>     { sceneGraph    :: Graph
+>     , scenePoints   :: Map Vertex Point
+>     , sceneSelected :: Maybe Vertex
 >     }
 >
 > emptyScene :: Scene
-> emptyScene = Scene{sceneGraph = emptyGraph, scenePoints = Map.empty}
+> emptyScene =
+>     Scene{ sceneGraph    = emptyGraph
+>          , scenePoints   = Map.empty
+>          , sceneSelected = Nothing }
 >
 > addVertex' :: Vertex -> Point -> Scene -> Scene
-> addVertex' n pt Scene{sceneGraph = gr, scenePoints = pts} =
->     Scene{sceneGraph = addVertex n gr, scenePoints = Map.insert n pt pts}
+> addVertex' n pt sc@Scene{sceneGraph = gr, scenePoints = pts} =
+>     sc{sceneGraph = addVertex n gr, scenePoints = Map.insert n pt pts}
 >
 > addEdge' :: Edge -> Scene -> Scene
 > addEdge' e@(n1, n2) sc@Scene{sceneGraph = gr, scenePoints = pts} =
@@ -83,7 +88,7 @@ published: false
 > vertexColor = makeColor 1 0 0 1
 >
 > edgeColor :: Color
-> edgeColor = makeColor 1 1 1 0.5
+> edgeColor = makeColor 1 1 1 0.8
 >
 > drawVertex :: Vertex -> Scene -> Picture
 > drawVertex n sc = Translate x y (ThickCircle vertexRadius (vertexRadius * 2))
@@ -119,14 +124,15 @@ published: false
 >     l        = 2 * (dx * dx + dy * dy)
 >
 > pullVelocity :: Int -> Float -> Point -> Point -> Vector
-> pullVelocity nedges dt (v1x, v1y) (v2x, v2y)= (-(dx / weight), -(dy / weight))
+> pullVelocity nedges dt (v1x, v1y) (v2x, v2y) =
+>     (-(dx / weight), -(dy / weight))
 >   where
 >     (dx, dy) = (v1x - v2x, v1y - v2y)
 >     weight = adjust dt (fromIntegral (nedges + 1) * 10)
 >
 > updatePosition :: Float -> Vertex -> Scene -> (Bool, Point)
 > updatePosition dt v1 sc@Scene{ sceneGraph  = gr@Graph{graphNEdges = nedges}
->                           , scenePoints = pts } =
+>                              , scenePoints = pts } =
 >     let (xvel, yvel) = pull push
 >     in if xvel < epsilon && yvel < epsilon
 >        then (True,  (v1x, v1y))
@@ -143,14 +149,30 @@ published: false
 >               [getPos v2 sc | v2 <- Set.toList (vertexNeighs v1 gr)]
 
 > updatePositions :: Float -> (Bool, Scene) -> (Bool, Scene)
-> updatePositions _ (True,  sc) = (True, sc)
-> updatePositions dt (False, sc) =
+> updatePositions _ (True, sc) = (True, sc)
+> updatePositions dt (False, sc@Scene{sceneSelected = sel}) =
 >     go False sc (Set.toList (graphVertices (sceneGraph sc)))
 >   where
 >     go stable sc' []       = (stable, sc')
 >     go stable sc' (n : ns) =
->         let (nstable, pt ) = updatePosition dt n sc'
+>         let (nstable, pt ) = if Just n == sel
+>                              then (True, getPos n sc)
+>                              else updatePosition dt n sc'
 >         in go (stable && nstable) (addVertex' n pt sc') ns
+>
+> findVertex :: Point -> Scene -> Maybe Vertex
+> findVertex pos pts = Nothing
+>
+> handleEvent :: Event -> (Bool, Scene) -> (Bool, Scene)
+> handleEvent (EventKey (MouseButton LeftButton) Down _ pos) (stable, sc) =
+>     (stable, case findVertex pos sc of
+>                  Nothing -> sc
+>                  Just v  -> sc{sceneSelected = Just v})
+> handleEvent (EventKey (MouseButton LeftButton) Up _ _) (stable, sc) =
+>     (stable, sc{sceneSelected = Nothing})
+> handleEvent (EventMotion pos) (_, sc@Scene{sceneSelected = Just v}) =
+>     (False, sc{scenePoints = Map.insert v pos (scenePoints sc)})
+> handleEvent _ sc = sc
 
 > dummy :: Scene
 > dummy = fromPoints ([(1, (10, 10)), (2, (0, 0)), (3, (50, 50)), (4, (-20, -30))],
@@ -159,7 +181,7 @@ published: false
 > sceneWindow :: Scene -> IO ()
 > sceneWindow sc =
 >     play (InWindow "Graph Drawing" (200, 200) (10, 10))
->          black 30 (False, sc) (drawScene . snd) (const id) updatePositions
+>          black 30 (False, sc) (drawScene . snd) handleEvent updatePositions
 >
 > main :: IO ()
 > main = sceneWindow dummy

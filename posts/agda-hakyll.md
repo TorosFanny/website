@@ -7,7 +7,7 @@ To render nicely my [previous post](/posts/AgdaSort.html) I have written [some
 glue Haskell code](http://hackage.haskell.org/package/hakyll-agda) that
 implements an Hakyll `Compiler` that supports Agda files.  The interesting
 function is
-[`pandocAgdaCompilerWith`](https://github.com/bitonic/website/blob/master/Hakyll/Web/Agda.hs#L164).
+[`pandocAgdaCompilerWith`](https://github.com/bitonic/hakyll-agda/blob/master/Hakyll/Web/Agda.hs#L169).
 It takes configurations for the Pandoc reader and writer and for the Agda
 compiler and produces HTML files.  The HTML is produced by interpreting the
 non-code in the literate file as Markdown.

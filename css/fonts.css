@@ -31,13 +31,3 @@ license (http://www.gnu.org/licenses/gpl.html) and the OFL license
     font-weight: normal;
     font-style: normal;
 }
-
-@font-face {
-    font-family: 'Inconsolata';
-    src: url('../fonts/inconsolata-webfont.eot?') format('eot'),
-         url('../fonts/inconsolata-webfont.woff') format('woff'),
-         url('../fonts/inconsolata-webfont.ttf') format('truetype'),
-         url('../fonts/inconsolata-webfont.svg#webfont0RLrQAdt') format('svg');
-    font-weight: normal;
-    font-style: normal;
-}

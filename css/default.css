@@ -29,6 +29,12 @@ body {
     background-position: right bottom; 
 }
 
+pre, code, samp {
+    font-family: Inconsolata, Consolas, monospace;
+    font-size: 1em;
+    font-weight: normal;
+}
+
 #title, h1, h2, h3 {
     font-family: LinuxBiolinum, Helvetica, Arial, sans-serif;
 }
