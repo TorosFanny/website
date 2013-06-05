@@ -52,26 +52,22 @@ published: false
 >     { scGraph    :: Graph
 >     , scPoints   :: Map Vertex Point
 >     , scSelected :: Maybe Vertex
->     , scStable   :: Bool
 >     }
 >
 > emptyScene :: Scene
 > emptyScene =
 >     Scene{ scGraph    = emptyGraph
 >          , scPoints   = Map.empty
->          , scSelected = Nothing
->          , scStable   = True }
+>          , scSelected = Nothing }
 >
 > addVertex' :: Vertex -> Point -> Scene -> Scene
 > addVertex' n pt sc@Scene{scGraph = gr, scPoints = pts} =
->     sc{ scGraph = addVertex n gr
->       , scPoints = Map.insert n pt pts
->       , scStable = False }
+>     sc{scGraph = addVertex n gr, scPoints = Map.insert n pt pts}
 >
 > addEdge' :: Edge -> Scene -> Scene
 > addEdge' e@(n1, n2) sc@Scene{scGraph = gr, scPoints = pts} =
 >     if Map.member n1 pts && Map.member n2 pts
->     then sc{scGraph = addEdge e gr, scStable = False}
+>     then sc{scGraph = addEdge e gr}
 >     else error "non existant point!"
 
 > -- TODO use foldl'
@@ -134,12 +130,9 @@ published: false
 >     (dx, dy) = local v1 v2
 >     weight = adjust dt (fromIntegral (nedges + 1) * 10)
 >
-> updatePosition :: Float -> Vertex -> Scene -> (Bool, Point)
+> updatePosition :: Float -> Vertex -> Scene -> Point
 > updatePosition dt v1 sc@Scene{scPoints = pts, scGraph = gr} =
->     let (xvel, yvel) = pull push
->     in if abs xvel < epsilon && abs yvel < epsilon
->        then (True,  (v1x, v1y))
->        else (False, (v1x + xvel, v1y + yvel))
+>     let (xvel, yvel) = pull push in (v1x + xvel, v1y + yvel)
 >   where
 >     v1pos@(v1x, v1y) = getPos v1 sc
 >     addVel (x, y) (x', y') = (x + x', y + y')
@@ -153,17 +146,12 @@ published: false
 >               [getPos v2 sc | v2 <- Set.toList (vertexNeighs v1 gr)]
 
 > updatePositions :: Float -> Scene -> Scene
-> updatePositions _  sc@Scene{scStable = True} = sc
-> updatePositions dt sc@Scene{scSelected = sel} =
->     go sc (Set.toList (grVertices (scGraph sc{scStable = True})))
+> updatePositions dt sc@Scene{scSelected = sel, scGraph = gr} =
+>     foldr uppt sc . Set.toList . grVertices $ gr
 >   where
->     go sc' []       = sc'
->     go sc' (n : ns) =
->         let (nstable, pt ) = if Just n == sel
->                              then (True, getPos n sc)
->                              else updatePosition dt n sc'
->         in go (addVertex' n pt sc'){scStable = scStable sc' && nstable} ns
->
+>     uppt n sc' =
+>         let pt = if Just n == sel then getPos n sc else updatePosition dt n sc'
+>         in addVertex' n pt sc'
 >
 > inCircle :: Point -> Point -> Bool
 > inCircle p center = magV (local center p) <= vertexRadius
@@ -181,8 +169,8 @@ published: false
 >         Just v  -> sc{scSelected = Just v}
 > handleEvent (EventKey (MouseButton LeftButton) Up _ _) sc =
 >     sc{scSelected = Nothing}
-> handleEvent (EventMotion pos) sc@Scene{scSelected = Just v} =
->     sc{scPoints = Map.insert v pos (scPoints sc), scStable = False}
+> handleEvent (EventMotion pos) sc@Scene{scPoints = pts, scSelected = Just v} =
+>     sc{scPoints = Map.insert v pos pts}
 > handleEvent _ sc = sc
 
 > dummy :: Scene
