@@ -60,12 +60,12 @@ published: false
 >          , scPoints   = Map.empty
 >          , scSelected = Nothing }
 >
-> addVertex' :: Vertex -> Point -> Scene -> Scene
-> addVertex' n pt sc@Scene{scGraph = gr, scPoints = pts} =
+> scAddVertex :: Vertex -> Point -> Scene -> Scene
+> scAddVertex n pt sc@Scene{scGraph = gr, scPoints = pts} =
 >     sc{scGraph = addVertex n gr, scPoints = Map.insert n pt pts}
 >
-> addEdge' :: Edge -> Scene -> Scene
-> addEdge' e@(n1, n2) sc@Scene{scGraph = gr, scPoints = pts} =
+> scAddEdge :: Edge -> Scene -> Scene
+> scAddEdge e@(n1, n2) sc@Scene{scGraph = gr, scPoints = pts} =
 >     if Map.member n1 pts && Map.member n2 pts
 >     then sc{scGraph = addEdge e gr}
 >     else error "non existant point!"
@@ -73,7 +73,7 @@ published: false
 > -- TODO use foldl'
 > fromPoints :: ([(Vertex, Point)], [Edge]) -> Scene
 > fromPoints (pts, es) =
->     foldr addEdge' (foldr (uncurry addVertex') emptyScene pts) es
+>     foldr scAddEdge (foldr (uncurry scAddVertex) emptyScene pts) es
 >
 > getPos :: Vertex -> Scene -> Point
 > getPos n Scene{scPoints = pts} = pts Map.! n
@@ -151,7 +151,7 @@ published: false
 >   where
 >     uppt n sc' =
 >         let pt = if Just n == sel then getPos n sc else updatePosition dt n sc'
->         in addVertex' n pt sc'
+>         in scAddVertex n pt sc'
 >
 > inCircle :: Point -> Point -> Bool
 > inCircle p center = magV (local center p) <= vertexRadius
