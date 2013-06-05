@@ -18,14 +18,12 @@ published: false
 > type Edge = (Vertex, Vertex)
 >
 > data Graph = Graph
->     { graphVertices :: Set Vertex
->     , graphNeighs   :: Map Vertex (Set Vertex)
->     , graphNEdges   :: Int
+>     { graphVertices:: Set Vertex
+>     , graphNeighs  :: Map Vertex (Set Vertex)
 >     }
 >
 > emptyGraph :: Graph
-> emptyGraph =
->     Graph {graphVertices = Set.empty, graphNeighs = Map.empty, graphNEdges = 0}
+> emptyGraph = Graph {graphVertices = Set.empty, graphNeighs = Map.empty}
 >
 > addVertex :: Vertex -> Graph -> Graph
 > addVertex n gr@Graph{graphVertices = nodes, graphNeighs = neighs} =
@@ -37,12 +35,9 @@ published: false
 > vertexNeighs n Graph{graphNeighs = neighs} = neighs Map.! n
 >
 > addEdge :: Edge -> Graph -> Graph
-> addEdge (n1, n2) (addVertex n1 . addVertex n2 -> gr@Graph{graphNEdges = nedges}) =
->    gr{ graphNeighs = neighs
->      , graphNEdges = nedges + if Set.member n2 n1neighs then 1 else 0 }
+> addEdge (n1, n2) (addVertex n1 . addVertex n2 -> gr) = gr{graphNeighs = neighs}
 >   where
->     n1neighs = (vertexNeighs n1 gr)
->     neighs = Map.insert n1 (Set.insert n2 n1neighs) $
+>     neighs = Map.insert n1 (Set.insert n2 (vertexNeighs n1 gr)) $
 >              Map.insert n2 (Set.insert n1 (vertexNeighs n2 gr)) $
 >              graphNeighs gr
 >
@@ -136,8 +131,7 @@ published: false
 >     weight = adjust dt (fromIntegral (nedges + 1) * 10)
 >
 > updatePosition :: Float -> Vertex -> Scene -> (Bool, Point)
-> updatePosition dt v1 sc@Scene{ sceneGraph  = gr@Graph{graphNEdges = nedges}
->                              , scenePoints = pts } =
+> updatePosition dt v1 sc@Scene{scenePoints = pts, sceneGraph = gr} =
 >     let (xvel, yvel) = pull push
 >     in if xvel < epsilon && yvel < epsilon
 >        then (True,  (v1x, v1y))
@@ -145,12 +139,13 @@ published: false
 >   where
 >     v1pos@(v1x, v1y) = getPos v1 sc
 >     addVel (x, y) (x', y') = (x + x', y + y')
+>     neighs = vertexNeighs v1 gr
 >
 >     push = Map.foldr' (\v2pos -> addVel (pushVelocity dt v1pos v2pos)) (0, 0) pts
 >
 >     -- TODO use foldl'
 >     pull vel =
->         foldr (\v2pos -> addVel (pullVelocity nedges dt v1pos v2pos)) vel
+>         foldr (\v2pos -> addVel (pullVelocity (Set.size neighs) dt v1pos v2pos)) vel
 >               [getPos v2 sc | v2 <- Set.toList (vertexNeighs v1 gr)]
 
 > updatePositions :: Float -> (Bool, Scene) -> (Bool, Scene)
