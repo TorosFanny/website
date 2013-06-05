@@ -133,7 +133,7 @@ published: false
 > updatePosition :: Float -> Vertex -> Scene -> (Bool, Point)
 > updatePosition dt v1 sc@Scene{scenePoints = pts, sceneGraph = gr} =
 >     let (xvel, yvel) = pull push
->     in if xvel < epsilon && yvel < epsilon
+>     in if abs xvel < epsilon && abs yvel < epsilon
 >        then (True,  (v1x, v1y))
 >        else (False, (v1x + xvel, v1y + yvel))
 >   where
