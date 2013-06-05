@@ -18,56 +18,60 @@ published: false
 > type Edge = (Vertex, Vertex)
 >
 > data Graph = Graph
->     { graphVertices:: Set Vertex
->     , graphNeighs  :: Map Vertex (Set Vertex)
+>     { grVertices :: Set Vertex
+>     , grNeighs   :: Map Vertex (Set Vertex)
 >     }
 >
 > emptyGraph :: Graph
-> emptyGraph = Graph {graphVertices = Set.empty, graphNeighs = Map.empty}
+> emptyGraph = Graph {grVertices = Set.empty, grNeighs = Map.empty}
 >
 > addVertex :: Vertex -> Graph -> Graph
-> addVertex n gr@Graph{graphVertices = nodes, graphNeighs = neighs} =
->     gr{ graphVertices = Set.insert n nodes
->       , graphNeighs   = maybe (Map.insert n Set.empty neighs) (const neighs)
+> addVertex n gr@Graph{grVertices = nodes, grNeighs = neighs} =
+>     gr{ grVertices = Set.insert n nodes
+>       , grNeighs   = maybe (Map.insert n Set.empty neighs) (const neighs)
 >                               (Map.lookup n neighs) }
 >
 > vertexNeighs :: Vertex -> Graph -> Set Vertex
-> vertexNeighs n Graph{graphNeighs = neighs} = neighs Map.! n
+> vertexNeighs n Graph{grNeighs = neighs} = neighs Map.! n
 >
 > addEdge :: Edge -> Graph -> Graph
-> addEdge (n1, n2) (addVertex n1 . addVertex n2 -> gr) = gr{graphNeighs = neighs}
+> addEdge (n1, n2) (addVertex n1 . addVertex n2 -> gr) = gr{grNeighs = neighs}
 >   where
 >     neighs = Map.insert n1 (Set.insert n2 (vertexNeighs n1 gr)) $
 >              Map.insert n2 (Set.insert n1 (vertexNeighs n2 gr)) $
->              graphNeighs gr
+>              grNeighs gr
 >
 > graphEdges :: Graph -> Set Edge
-> graphEdges = Map.foldrWithKey' foldNeighs Set.empty . graphNeighs
+> graphEdges = Map.foldrWithKey' foldNeighs Set.empty . grNeighs
 >   where
 >     foldNeighs n1 ns es =
 >         Set.foldr' (\n2 -> Set.insert (order (n1, n2))) es ns
 >     order (n1, n2) = if n1 > n2 then (n1, n2) else (n2, n1)
 >
 > data Scene = Scene
->     { sceneGraph    :: Graph
->     , scenePoints   :: Map Vertex Point
->     , sceneSelected :: Maybe Vertex
+>     { scGraph    :: Graph
+>     , scPoints   :: Map Vertex Point
+>     , scSelected :: Maybe Vertex
+>     , scStable   :: Bool
 >     }
 >
 > emptyScene :: Scene
 > emptyScene =
->     Scene{ sceneGraph    = emptyGraph
->          , scenePoints   = Map.empty
->          , sceneSelected = Nothing }
+>     Scene{ scGraph    = emptyGraph
+>          , scPoints   = Map.empty
+>          , scSelected = Nothing
+>          , scStable   = True }
 >
 > addVertex' :: Vertex -> Point -> Scene -> Scene
-> addVertex' n pt sc@Scene{sceneGraph = gr, scenePoints = pts} =
->     sc{sceneGraph = addVertex n gr, scenePoints = Map.insert n pt pts}
+> addVertex' n pt sc@Scene{scGraph = gr, scPoints = pts} =
+>     sc{ scGraph = addVertex n gr
+>       , scPoints = Map.insert n pt pts
+>       , scStable = False }
 >
 > addEdge' :: Edge -> Scene -> Scene
-> addEdge' e@(n1, n2) sc@Scene{sceneGraph = gr, scenePoints = pts} =
+> addEdge' e@(n1, n2) sc@Scene{scGraph = gr, scPoints = pts} =
 >     if Map.member n1 pts && Map.member n2 pts
->     then sc{sceneGraph = addEdge e gr}
+>     then sc{scGraph = addEdge e gr, scStable = False}
 >     else error "non existant point!"
 
 > -- TODO use foldl'
@@ -76,7 +80,7 @@ published: false
 >     foldr addEdge' (foldr (uncurry addVertex') emptyScene pts) es
 >
 > getPos :: Vertex -> Scene -> Point
-> getPos n Scene{scenePoints = pts} = pts Map.! n
+> getPos n Scene{scPoints = pts} = pts Map.! n
 
 > vertexRadius :: Float
 > vertexRadius = 3
@@ -95,11 +99,11 @@ published: false
 > drawEdge (n1, n2) sc = Line [getPos n1 sc, getPos n2 sc]
 >
 > drawScene :: Scene -> Picture
-> drawScene sc@Scene{sceneGraph = gr} =
+> drawScene sc@Scene{scGraph = gr} =
 >     Pictures [Color vertexColor vertices, Color edgeColor edges]
 >   where
->     vertices = Pictures [drawVertex n sc | n <- Set.toList (graphVertices gr)]
->     edges    = Pictures [drawEdge e sc   | e <- Set.toList (graphEdges gr)   ]
+>     vertices = Pictures [drawVertex n sc | n <- Set.toList (grVertices gr)]
+>     edges    = Pictures [drawEdge e sc   | e <- Set.toList (graphEdges gr)]
 
 > epsilon :: Float
 > epsilon = 0.001
@@ -131,7 +135,7 @@ published: false
 >     weight = adjust dt (fromIntegral (nedges + 1) * 10)
 >
 > updatePosition :: Float -> Vertex -> Scene -> (Bool, Point)
-> updatePosition dt v1 sc@Scene{scenePoints = pts, sceneGraph = gr} =
+> updatePosition dt v1 sc@Scene{scPoints = pts, scGraph = gr} =
 >     let (xvel, yvel) = pull push
 >     in if abs xvel < epsilon && abs yvel < epsilon
 >        then (True,  (v1x, v1y))
@@ -148,37 +152,37 @@ published: false
 >         foldr (\v2pos -> addVel (pullVelocity (Set.size neighs) dt v1pos v2pos)) vel
 >               [getPos v2 sc | v2 <- Set.toList (vertexNeighs v1 gr)]
 
-> updatePositions :: Float -> (Bool, Scene) -> (Bool, Scene)
-> updatePositions _ (True, sc) = (True, sc)
-> updatePositions dt (False, sc@Scene{sceneSelected = sel}) =
->     go False sc (Set.toList (graphVertices (sceneGraph sc)))
+> updatePositions :: Float -> Scene -> Scene
+> updatePositions _  sc@Scene{scStable = True} = sc
+> updatePositions dt sc@Scene{scSelected = sel} =
+>     go sc (Set.toList (grVertices (scGraph sc{scStable = True})))
 >   where
->     go stable sc' []       = (stable, sc')
->     go stable sc' (n : ns) =
+>     go sc' []       = sc'
+>     go sc' (n : ns) =
 >         let (nstable, pt ) = if Just n == sel
 >                              then (True, getPos n sc)
 >                              else updatePosition dt n sc'
->         in go (stable && nstable) (addVertex' n pt sc') ns
+>         in go (addVertex' n pt sc'){scStable = scStable sc' && nstable} ns
 >
 >
 > inCircle :: Point -> Point -> Bool
 > inCircle p center = magV (local center p) <= vertexRadius
 >
 > findVertex :: Point -> Scene -> Maybe Vertex
-> findVertex p1 (scenePoints -> pts)=
+> findVertex p1 (scPoints -> pts)=
 >     Map.foldrWithKey'
 >     (\v p2 m -> m `mplus` if inCircle p1 p2 then Just v else Nothing)
 >     Nothing pts
 >
-> handleEvent :: Event -> (Bool, Scene) -> (Bool, Scene)
-> handleEvent (EventKey (MouseButton LeftButton) Down _ pos) (stable, sc) =
->     (stable, case findVertex pos sc of
->                  Nothing -> sc
->                  Just v  -> sc{sceneSelected = Just v})
-> handleEvent (EventKey (MouseButton LeftButton) Up _ _) (stable, sc) =
->     (stable, sc{sceneSelected = Nothing})
-> handleEvent (EventMotion pos) (_, sc@Scene{sceneSelected = Just v}) =
->     (False, sc{scenePoints = Map.insert v pos (scenePoints sc)})
+> handleEvent :: Event -> Scene -> Scene
+> handleEvent (EventKey (MouseButton LeftButton) Down _ pos) sc =
+>     case findVertex pos sc of
+>         Nothing -> sc
+>         Just v  -> sc{scSelected = Just v}
+> handleEvent (EventKey (MouseButton LeftButton) Up _ _) sc =
+>     sc{scSelected = Nothing}
+> handleEvent (EventMotion pos) sc@Scene{scSelected = Just v} =
+>     sc{scPoints = Map.insert v pos (scPoints sc), scStable = False}
 > handleEvent _ sc = sc
 
 > dummy :: Scene
@@ -187,9 +191,8 @@ published: false
 >
 > sceneWindow :: Scene -> IO ()
 > sceneWindow sc =
->     play (InWindow "Graph Drawing" (200, 200) (10, 10))
->          black 30 (False, sc) (drawScene . snd) handleEvent updatePositions
+>     play (InWindow "Graph Drawing" (640, 480) (10, 10))
+>          black 30 sc drawScene handleEvent updatePositions
 >
 > main :: IO ()
 > main = sceneWindow dummy
-
