@@ -181,7 +181,7 @@ Parsing
 Pretty printing
 ----
 
-> class Ord v => Slam v where
+> class Ord a => Slam a where
 >     name :: a -> Id
 > instance Slam Id where
 >     name = id
