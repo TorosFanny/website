@@ -13,9 +13,9 @@ TODO fixities
 > {-# LANGUAGE OverloadedStrings #-}
 > {-# LANGUAGE TypeSynonymInstances #-}
 > {-# OPTIONS_GHC -fno-warn-orphans #-}
-> import Control.Applicative (Applicative(..), (<$>), (<$))
+> import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 > import Control.Arrow (first)
-> import Control.Monad (liftM, ap, unless)
+> import Control.Monad (liftM, ap, unless, void)
 > import Control.Monad.State
 >     (StateT, runStateT, State, evalState, get, gets, put, lift)
 > import Data.Foldable (Foldable, msum)
@@ -26,6 +26,7 @@ TODO fixities
 > import Text.PrettyPrint.Leijen (Pretty(..), Doc, (<+>), (<>))
 > import qualified Data.Map as Map
 > import qualified Text.PrettyPrint.Leijen as PP
+> import Text.Parsec ((<?>))
 > import qualified Text.Parsec as P
 > import Text.Parsec.String
 
@@ -116,8 +117,69 @@ Term representation
 Parsing
 ----
 
-> pParse :: Parser (Tm Id)
-> pParse = undefined
+> infixl 3 <||>
+> (<||>) :: Parser a -> Parser a -> Parser a
+> p₁ <||> p₂ = P.try p₁ <|> p₂
+>
+> lexeme :: String -> Parser ()
+> lexeme s = void (P.string s <* P.spaces)
+
+> pParse :: String -> Either P.ParseError (Tm Id)
+> pParse = P.parse (P.spaces *> pCompound <* P.eof) ""
+>
+> pSingle :: Parser (Tm Id)
+> pSingle =
+>          Ty    <$  lexeme "Ty"
+>     <||> Var   <$> pId
+>     <||> Unit  <$  lexeme "Unit"
+>     <||> Tt    <$  lexeme "tt"
+>     <||> Empty <$  lexeme "Empty"
+>     <?>  "single term"
+>
+> pCompound :: Parser (Tm Id)
+> pCompound =
+>         Absurd <$> (lexeme "absurd" *> pParens)
+>     <||> pArr
+>     <||> pLam
+>     <||> pBinder "*" prod pApp
+>     <||> Pair <$> pParens <*> (lexeme "," *> pParens)
+>     <||> Fst <$> (lexeme "fst" *> pParens)
+>     <||> Snd <$> (lexeme "snd" *> pParens)
+>     <||> uncurry (:∈) <$> pTyped pApp
+>     <||> pApp
+>     <?>  "compound term"
+>
+> pId :: Parser Id
+> pId = (((:) <$> P.alphaNum <*> P.many idp) <* P.spaces) <?> "identifier"
+>   where idp = P.alphaNum <||> P.digit <||> P.oneOf "_-'"
+>
+> pParens :: Parser (Tm Id)
+> pParens = pSingle <||> (lexeme "(" *> pCompound <* lexeme ")")
+>
+> pArr :: Parser (Tm Id)
+> pArr = bi (bi pApp <||> pApp) where bi = pBinder "->" arr
+>
+> pLam :: Parser (Tm Id)
+> pLam = P.string "\\" *> go
+>   where go = lexeme "=>" *> pApp <||>
+>              lam <$> pId <*> go
+>
+> pApp :: Parser (Tm Id)
+> pApp = foldl1 (:@) <$> P.many1 pParens
+>
+> pBinder :: String -> (Id -> Ty Id -> Ty Id -> Ty Id) -> Parser (Ty Id)
+>         -> Parser (Ty Id)
+> pBinder tok f p = dep <||> simple
+>   where
+>     dep = do lexeme "["
+>              (v, ty₁) <- pTyped pId
+>              lexeme "]"
+>              lexeme tok
+>              f v ty₁ <$> p
+>     simple = f "_" <$> pApp <*> (lexeme tok *> pApp)
+>
+> pTyped :: Parser a -> Parser (a, Ty Id)
+> pTyped p = (,) <$> p <*> (lexeme ":" *> pApp)
 
 Pretty printing
 ----
@@ -170,7 +232,7 @@ Pretty printing
 >     fromString = PP.text
 >
 > ppPretty :: Tm Id -> PPM Doc
-> ppPretty Ty             = return "*"
+> ppPretty Ty             = return "Ty"
 > ppPretty (Var v)        = return (PP.text (name v))
 > ppPretty Unit           = return "Unit"
 > ppPretty Tt             = return "tt"
@@ -232,36 +294,6 @@ Pretty printing
 > instance (Ord v, HasName v) => Pretty (Tm v) where
 >      pretty t = evalState (ppPretty (slam t)) Map.empty
 
-Contexts
-----
-
-Blah blah.[^gadt]
-
-[^gadt]:
-< data Ctx m v where
-<     C0   :: Ctx m v
-<     (:◁) :: Ctx m v -> m v -> Ctx m (Var v)
-<
-< lookCtx :: Functor m => Ctx m v -> v -> Maybe (m v)
-< lookCtx C0         _         = Nothing
-< lookCtx (ctx :◁ _) (Free v)  = fmap Free <$> lookCtx ctx v
-< lookCtx (_   :◁ t) (Bound _) = Just (Free <$> t)
-
-> type Ctx v m = v -> Maybe (m v)
->
-> ε :: Ctx v m
-> ε = const Nothing
->
-> insert :: (Eq v) => v -> m v -> Ctx v m -> Ctx v m
-> insert v x ctx v' = if v == v' then Just x else ctx v'
->
-> (◁◁) :: Functor m => Ctx v m -> Maybe (m v) -> Ctx (Var v) m
-> (_   ◁◁ t) (Bound _) = fmap Free <$> t
-> (ctx ◁◁ _) (Free v)  = fmap Free <$> ctx v
->
-> (◁) :: Functor m => Ctx v m -> m v -> Ctx (Var v) m
-> ctx ◁ t = ctx ◁◁ Just t
-
 Reduction
 ----
 
@@ -285,8 +317,39 @@ Reduction
 >                         t'        -> t'
 > nf (t :∈ ty)      = nf t :∈ nf ty
 
-A Monad
+Contexts
 ----
+
+Blah blah.[^gadt]
+
+[^gadt]:
+< data Ctx m v where
+<     C0   :: Ctx m v
+<     (:◁) :: Ctx m v -> m v -> Ctx m (Var v)
+<
+< lookCtx :: Functor m => Ctx m v -> v -> Maybe (m v)
+< lookCtx C0         _         = Nothing
+< lookCtx (ctx :◁ _) (Free v)  = fmap Free <$> lookCtx ctx v
+< lookCtx (_   :◁ t) (Bound _) = Just (Free <$> t)
+
+> type Ctx v m = v -> Maybe (m v)
+>
+> ε :: Ctx v m
+> ε = const Nothing
+>
+> insert :: (Eq v) => v -> m v -> Ctx v m -> Ctx v m
+> insert v x ctx v' = if v == v' then Just x else ctx v'
+>
+> (◁◁) :: (Functor m) => Ctx v m -> Maybe (m v) -> Ctx (Var v) m
+> (_   ◁◁ t) (Bound _) = fmap Free <$> t
+> (ctx ◁◁ _) (Free v)  = fmap Free <$> ctx v
+>
+> (◁) :: (Functor m) => Ctx v m -> m v -> Ctx (Var v) m
+> ctx ◁ t = ctx ◁◁ Just t
+
+Type checking
+----
+
 
 > data TyError
 >     = OutOfBounds Id
@@ -306,9 +369,6 @@ A Monad
 > lookupTy v =
 >   do tys <- get
 >      maybe (tyError (OutOfBounds (name v))) return (tys v)
-
-Type checking
-----
 
 > nest :: Ty v -> TCM (Var v) a -> TCM v a
 > nest ty m =
