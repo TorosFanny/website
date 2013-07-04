@@ -341,6 +341,7 @@ Type checking
 >        case (t', ty) of
 >            (Pair fs _, _ :* tysn) -> return (tysn @@ fs)
 >            _                      -> tyError ExpectingPair
+> infer (t :∈ ty) = ty <$ t ∈ ty
 > infer _ = tyError NotAnnotated
 >
 > inferNf :: (Eq v, HasName v) => Tm v -> TCM v (Ty v)
