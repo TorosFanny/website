@@ -17,8 +17,10 @@ TODO fixities
 > {-# OPTIONS_GHC -fno-warn-orphans #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$))
 > import Control.Arrow (first)
+> import Control.Monad (liftM, ap, unless)
 > import Control.Monad.State
-> import Data.Foldable (Foldable, foldMap)
+>     (StateT, runStateT, State, evalState, get, gets, put, lift)
+> import Data.Foldable (Foldable, msum)
 > import Data.Map (Map)
 > import Data.Maybe (fromMaybe)
 > import Data.String (IsString(..))
@@ -33,10 +35,11 @@ Term representation
 > type Id = String
 > newtype Name = Name Id
 >     deriving (Show)
-> instance Eq Name where _ == _ = True
+> instance Eq  Name where _ == _ = True
+> instance Ord Name where compare _ _ = EQ
 
 > data Var v = Bound Name | Free v
->     deriving (Eq, Show, Functor, Foldable, Traversable)
+>     deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 >
 > bound :: Id -> Var Id
 > bound = Bound . Name
@@ -148,7 +151,7 @@ Pretty printing
 >
 > boundName :: (Foldable m, Monad m) => Scope m Id -> PPM (Maybe Id, m Id)
 > boundName t =
->     case foldMap f t of
+>     case msum (f `liftM` t) of
 >         Nothing -> return (Nothing, t @@ undefined)
 >         Just n  -> do idcount <- get
 >                       let c  = fromMaybe 0 (Map.lookup n idcount)
@@ -199,7 +202,7 @@ Pretty printing
 > ppLam t₀ = fmap ("\\" <>) (go t₀)
 >   where
 >     go (Lam s) = do (arg, t) <- boundName' s; fmap (PP.text arg <+>) (go t)
->     go t       = ppApps t
+>     go t       = fmap ("=>" <+>) (ppApps t)
 >
 > ppApps :: Tm Id -> PPM Doc
 > ppApps (t₁ :@ t₂) = (<+>) <$> ppApps t₁ <*> ppParens t₂
