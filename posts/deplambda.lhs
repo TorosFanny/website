@@ -11,21 +11,27 @@ TODO fixities
 > {-# LANGUAGE DeriveTraversable #-}
 > {-# LANGUAGE FlexibleInstances #-}
 > {-# LANGUAGE OverloadedStrings #-}
+> {-# LANGUAGE TupleSections #-}
 > {-# LANGUAGE TypeSynonymInstances #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 > import Control.Arrow (first)
 > import Control.Monad (liftM, ap, unless, void)
-> import Control.Monad.State (StateT, runStateT, State, evalState, get, gets, put, lift)
+> import Control.Monad.State
+>     (StateT, runStateT, State, evalState, get, gets, put, modify, lift)
 > import Data.Foldable (Foldable, msum)
 > import Data.Map (Map)
 > import qualified Data.Map as Map
 > import Data.Maybe (fromMaybe)
 > import Data.Traversable (Traversable, traverse)
-> import Text.Parsec ((<?>))
+> import Text.Parsec ((<?>), ParseError)
 > import qualified Text.Parsec as P
 > import Text.Parsec.String
-> import Text.PrettyPrint (Doc, (<+>), (<>))
+> import Text.PrettyPrint (Doc, (<+>), (<>), ($$), ($+$))
 > import qualified Text.PrettyPrint as PP
+> import System.Console.Haskeline
+>     (InputT, getInputLine, runInputT, defaultSettings)
+> import System.Console.Haskeline.MonadException ()
+
 
 Term representation
 ----
@@ -121,8 +127,8 @@ Parsing
 > lexeme :: String -> Parser ()
 > lexeme s = void (P.string s <* P.spaces)
 
-> pParse :: String -> Either P.ParseError (Tm Id)
-> pParse = P.parse (P.spaces *> pCompound <* P.eof) ""
+> pTm :: Parser (Tm Id)
+> pTm = pCompound
 >
 > pSingle :: Parser (Tm Id)
 > pSingle =
@@ -135,7 +141,7 @@ Parsing
 >
 > pCompound :: Parser (Tm Id)
 > pCompound =
->         Absurd <$> (lexeme "absurd" *> pParens)
+>          Absurd <$> (lexeme "absurd" *> pParens)
 >     <||> pArr
 >     <||> pLam
 >     <||> pBinder "*" prod pApp
@@ -159,7 +165,7 @@ Parsing
 > pLam :: Parser (Tm Id)
 > pLam = P.string "\\" *> go
 >   where go = lexeme "=>" *> pApp <||>
->              lam <$> pId <*> go
+>              lam <$> (P.string "_" <||> pId) <*> go
 >
 > pApp :: Parser (Tm Id)
 > pApp = foldl1 (:@) <$> P.many1 pParens
@@ -225,24 +231,24 @@ Pretty printing
 > boundName' :: (Foldable m, Monad m) => Scope m Id -> PPM (Id, m Id)
 > boundName' s = first (fromMaybe "_") <$> boundName s
 >
-> ppPretty :: (Slam v) => Tm v -> Doc
-> ppPretty t = evalState (ppPretty' (slam t)) Map.empty
+> ppTm :: (Slam v) => Tm v -> Doc
+> ppTm t = evalState (ppTm' (slam t)) Map.empty
 >
-> ppPretty' :: Tm Id -> PPM Doc
-> ppPretty' Ty             = return "Ty"
-> ppPretty' (Var v)        = return (PP.text (name v))
-> ppPretty' Unit           = return "Unit"
-> ppPretty' Tt             = return "tt"
-> ppPretty' Empty          = return "Empty"
-> ppPretty' (Absurd t)     = fmap ("absurd" <+>) (ppParens t)
-> ppPretty' t@(_ :→ _)     = ppArr t
-> ppPretty' t@(Lam _)      = ppLam t
-> ppPretty' t@(_ :@ _)     = ppApps t
-> ppPretty' (fsty :* snty) = ppBinder "->" ppApps fsty snty
-> ppPretty' (Pair fs ty)   = middle ", " (ppApps fs) (ppApps ty)
-> ppPretty' (Fst t)        = fmap ("fst" <+>) (ppParens t)
-> ppPretty' (Snd t)        = fmap ("snd" <+>) (ppParens t)
-> ppPretty' (t :∈ ty)      = ppTyped t ty
+> ppTm' :: Tm Id -> PPM Doc
+> ppTm' Ty             = return "Ty"
+> ppTm' (Var v)        = return (PP.text (name v))
+> ppTm' Unit           = return "Unit"
+> ppTm' Tt             = return "tt"
+> ppTm' Empty          = return "Empty"
+> ppTm' (Absurd t)     = fmap ("absurd" <+>) (ppParens t)
+> ppTm' t@(_ :→ _)     = ppArr t
+> ppTm' t@(Lam _)      = ppLam t
+> ppTm' t@(_ :@ _)     = ppApps t
+> ppTm' (fsty :* snty) = ppBinder "->" ppApps fsty snty
+> ppTm' (Pair fs ty)   = middle ", " (ppApps fs) (ppApps ty)
+> ppTm' (Fst t)        = fmap ("fst" <+>) (ppParens t)
+> ppTm' (Snd t)        = fmap ("snd" <+>) (ppParens t)
+> ppTm' (t :∈ ty)      = ppTyped t ty
 >
 > compound :: Tm v -> Bool
 > compound Ty      = False
@@ -253,7 +259,7 @@ Pretty printing
 > compound _       = True
 >
 > ppParens :: Tm Id -> PPM Doc
-> ppParens t = if compound t then PP.parens <$> ppPretty' t else ppPretty' t
+> ppParens t = if compound t then PP.parens <$> ppTm' t else ppTm' t
 >
 > ppArr :: Tm Id -> PPM Doc
 > ppArr (dom :→ cod) = ppBinder "->" ppArr dom cod
@@ -335,23 +341,47 @@ Blah blah.[^gadt]
 > insert :: (Eq v) => v -> m v -> Ctx v m -> Ctx v m
 > insert v x ctx v' = if v == v' then Just x else ctx v'
 >
-> (◁◁) :: (Functor m) => Ctx v m -> Maybe (m v) -> Ctx (Var v) m
-> (_   ◁◁ t) (Bound _) = fmap Free <$> t
-> (ctx ◁◁ _) (Free v)  = fmap Free <$> ctx v
->
 > (◁) :: (Functor m) => Ctx v m -> m v -> Ctx (Var v) m
-> ctx ◁ t = ctx ◁◁ Just t
+> (_   ◁ t) (Bound _) = Just (Free <$> t)
+> (ctx ◁ _) (Free v)  = fmap Free <$> ctx v
 
 Type checking
 ----
 
 > data TyError
 >     = OutOfBounds Id
->     | TyError String
->     | ExpectingFunction (Tm Id) (Ty Id)
->     | ExpectingPair (Tm Id) (Ty Id)
+>     | ExpectingFun (Tm Id) (Ty Id)
+>     | ExpectingProd (Tm Id) (Ty Id)
 >     | Mismatch (Ty Id) (Tm Id) (Ty Id)
 >     | NotAnnotated (Tm Id)
+>     | ParseError ParseError
+>
+> expectingFun :: (Slam v) => Tm v -> Tm v -> TCM v a
+> expectingFun t ty = tyError (ExpectingFun (slam t) (slam ty))
+> expectingProd :: (Slam v) => Tm v -> Tm v -> TCM v a
+> expectingProd t ty = tyError (ExpectingProd (slam t) (slam ty))
+>
+> nest4 :: Doc -> Doc
+> nest4 = PP.nest 4
+>
+> ppError :: TyError -> Doc
+> ppError (OutOfBounds n) = "Out of bound variable" <+> ppQuote (PP.text n)
+> ppError (ExpectingFun t ty) =
+>     "Expecting function type for term:" $$ nest4 (ppTm t) $$
+>     "instead of:" $$ nest4 (ppTm ty)
+> ppError (ExpectingProd t ty) =
+>     "Expecting product type for term:" $$ nest4 (ppTm t) $$
+>     "instead of:" $$ nest4 (ppTm ty)
+> ppError (Mismatch ty t tyt) =
+>     "Expecting type:" $$ nest4 (ppTm ty) $$
+>     "for term:" $$ nest4 (ppTm t) $$
+>     "instead of:" $$ nest4 (ppTm tyt)
+> ppError (NotAnnotated t) =
+>     "Unannotated canonical term:" $$ nest4 (ppTm t)
+> ppError (ParseError err) = PP.text (show err)
+
+> ppQuote :: Doc -> Doc
+> ppQuote d = "`" <> d <> "'"
 >
 > type Tys v = Ctx v Ty
 > type TCM v = StateT (Tys v) (Either TyError)
@@ -382,19 +412,19 @@ Type checking
 >     do ty₁ <- inferNf t₁
 >        case ty₁ of
 >            dom :→ cod -> (cod @@ dom) <$ (t₂ ∈ dom)
->            _          -> tyError (ExpectingFunction (slam t₁) (slam ty₁))
+>            _          -> expectingFun t₁ ty₁
 > infer (tyfs :* tysn) = inferBind tyfs tysn
 > infer (Fst t) =
 >     do ty <- inferNf t
 >        case ty of
 >            tyfs :* _ -> return tyfs
->            _         -> tyError (ExpectingPair (slam t) (slam ty))
+>            _         -> expectingProd t ty
 > infer (Snd t) =
 >     do let t' = nf t
 >        ty <- inferNf t'
 >        case (t', ty) of
 >            (Pair fs _, _ :* tysn) -> return (tysn @@ fs)
->            _                      -> tyError (ExpectingPair (slam t) (slam ty))
+>            _                      -> expectingProd t ty
 > infer (t :∈ ty) = ty <$ t ∈ ty
 > infer t = tyError (NotAnnotated (slam t))
 >
@@ -410,8 +440,10 @@ Type checking
 >     check :: (Slam v) => Tm v -> Ty v -> TCM v ()
 >     check (Absurd t) _ = check t Empty
 >     check (Lam s) (dom :→ cod) = nest dom (check s cod)
+>     check t@(Lam _) ty = expectingFun t ty
 >     check (Pair fs sn) (tyfs :* tysn) =
 >         do check fs tyfs; check sn (tysn @@ fs)
+>     check t@(Pair _ _) ty = expectingProd t ty
 >     check t ty =
 >         do tyt <- inferNf t
 >            unless (ty == tyt) (tyError (Mismatch (slam ty) (slam t) (slam tyt)))
@@ -419,5 +451,97 @@ Type checking
 A REPL
 ----
 
+> data Def = Def Id (Ty Id) (Maybe (Tm Id))
+> type Defs = Map Id (Tm Id)
+>
+> pDef :: Parser Def
+> pDef = post <||> body
+>   where
+>     post =
+>         do lexeme "postulate"
+>            (v, ty) <- pTyped pId
+>            return (Def v ty Nothing)
+>     body =
+>         do lexeme "let"
+>            (v, ty) <- pTyped pId
+>            lexeme "=>"
+>            t <- pTm
+>            return (Def v ty (Just t))
+
+> data Input
+>     = IInfer (Tm Id)
+>     | IEval (Tm Id)
+>     | IDef Def
+>     | IQuit
+>     | ISkip
+
+> data Output
+>     = OInfer (Ty Id)
+>     | OEval (Tm Id) (Ty Id)
+>     | OQuit
+>     | OOK
+>     | OSkip
+>
+> ppOutput :: Output -> Doc
+> ppOutput (OInfer ty)  = "Type:" $$ nest4 (ppTm ty)
+> ppOutput (OEval t ty) = ppOutput (OInfer ty) $+$ ppTm t
+> ppOutput OQuit        = ""
+> ppOutput OOK          = "OK"
+> ppOutput OSkip        = ""
+
+> pInput :: Parser Input
+> pInput =
+>          (command <?> "command")
+>     <||> ((IDef <$> pDef) <?> "definition")
+>     <||> IEval <$> pTm
+>     <||> return ISkip
+>   where
+>     command  = P.char ':' *> msum [P.char ch *> p | (ch, p) <- commands]
+>     commands = [('t', IInfer <$> pTm), ('q', return IQuit)]
+>
+> input :: String -> TCM Id Input
+> input =
+>     either (tyError . ParseError) return .
+>     P.parse (P.spaces *> pInput <* P.spaces <* P.eof) ""
+
+> newDef :: Def -> Defs -> TCM Id Defs
+> newDef (Def n ty₀ tm₀) defs =
+>     do ty ∈ Ty
+>        defs' <- case tm of
+>                     Nothing -> return defs
+>                     Just t  -> do t  ∈ ty; return (Map.insert n t defs)
+>        modify (insert n ty)
+>        return defs'
+>   where
+>     untop t' = do v <- t'; fromMaybe (Var v) (Map.lookup v defs)
+>     tm = untop <$> tm₀
+>     ty = untop ty₀
+
+> repl :: String -> Defs -> TCM Id (Output, Defs)
+> repl inps defs =
+>     do inp <- input inps
+>        case inp of
+>            IInfer t -> (, defs) . OInfer <$> infer t
+>            IEval t  -> (, defs) . OEval (nf t) <$> infer t
+>            IDef def -> (OOK,) <$> newDef def defs
+>            IQuit    -> return (OQuit, defs)
+>            ISkip    -> return (OSkip, defs)
+
+> run :: Tys Id -> Defs -> InputT IO ()
+> run tys defs =
+>     do sm <- getInputLine ">>> "
+>        case sm of
+>            Nothing -> run tys defs
+>            Just s ->
+>                case runStateT (repl s defs) tys of
+>                    Left err ->
+>                        do putDocLn (ppError err)
+>                           run tys defs
+>                    Right ((OQuit, _), _)   -> return ()
+>                    Right ((out, defs'), tys') ->
+>                        do putDocLn (ppOutput out)
+>                           run tys' defs'
+>   where putDocLn = lift . putStrLn . PP.render
+
 > main :: IO ()
-> main = undefined
+> main = runInputT defaultSettings (run ε Map.empty)
