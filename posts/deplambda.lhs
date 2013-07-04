@@ -181,11 +181,11 @@ Parsing
 Pretty printing
 ----
 
-> class HasName a where
+> class Ord v => Slam v where
 >     name :: a -> Id
-> instance HasName Id where
+> instance Slam Id where
 >     name = id
-> instance HasName v => HasName (Var v) where
+> instance Slam v => Slam (Var v) where
 >     name (Free v)         = name v
 >     name (Bound (Name n)) = n
 
@@ -193,7 +193,7 @@ Pretty printing
 > nameCount :: Id -> Count -> Id
 > nameCount n c = n ++ if c == 0 then "" else show c
 
-> slam :: (Ord v, HasName v) => Tm v -> Tm Id
+> slam :: (Slam v) => Tm v -> Tm Id
 > slam t = evalState (traverse fresh t)
 >                    (Map.empty :: Map v Count, Map.empty :: Map Id Count)
 >   where
@@ -225,8 +225,8 @@ Pretty printing
 > boundName' :: (Foldable m, Monad m) => Scope m Id -> PPM (Id, m Id)
 > boundName' s = first (fromMaybe "_") <$> boundName s
 >
-> ppPretty :: Tm Id -> String
-> ppPretty t = PP.render (evalState (ppPretty' (slam t)) Map.empty)
+> ppPretty :: (Slam v) => Tm v -> Doc
+> ppPretty t = evalState (ppPretty' (slam t)) Map.empty
 >
 > ppPretty' :: Tm Id -> PPM Doc
 > ppPretty' Ty             = return "Ty"
@@ -345,14 +345,13 @@ Blah blah.[^gadt]
 Type checking
 ----
 
-
 > data TyError
 >     = OutOfBounds Id
 >     | TyError String
->     | ExpectingFunction       -- TODO better
->     | ExpectingPair           -- TODO better
->     | Mismatch                -- TODO better
->     | NotAnnotated            -- TODO better
+>     | ExpectingFunction (Tm Id) (Ty Id)
+>     | ExpectingPair (Tm Id) (Ty Id)
+>     | Mismatch (Ty Id) (Tm Id) (Ty Id)
+>     | NotAnnotated (Tm Id)
 >
 > type Tys v = Ctx v Ty
 > type TCM v = StateT (Tys v) (Either TyError)
@@ -360,7 +359,7 @@ Type checking
 > tyError :: TyError -> TCM v a
 > tyError = lift . Left
 >
-> lookupTy :: (HasName v) => v -> TCM v (Ty v)
+> lookupTy :: (Slam v) => v -> TCM v (Ty v)
 > lookupTy v =
 >   do tys <- get
 >      maybe (tyError (OutOfBounds (name v))) return (tys v)
@@ -372,7 +371,7 @@ Type checking
 >            Left err     -> tyError err
 >            Right (x, _) -> return x
 >
-> infer :: (Eq v, HasName v) => Tm v -> TCM v (Ty v)
+> infer :: (Slam v) => Tm v -> TCM v (Ty v)
 > infer Ty = return Ty
 > infer (Var v) = lookupTy v
 > infer Unit = return Ty
@@ -383,39 +382,39 @@ Type checking
 >     do ty₁ <- inferNf t₁
 >        case ty₁ of
 >            dom :→ cod -> (cod @@ dom) <$ (t₂ ∈ dom)
->            _          -> tyError ExpectingFunction
+>            _          -> tyError (ExpectingFunction (slam t₁) (slam ty₁))
 > infer (tyfs :* tysn) = inferBind tyfs tysn
 > infer (Fst t) =
 >     do ty <- inferNf t
 >        case ty of
 >            tyfs :* _ -> return tyfs
->            _         -> tyError ExpectingPair
+>            _         -> tyError (ExpectingPair (slam t) (slam ty))
 > infer (Snd t) =
 >     do let t' = nf t
 >        ty <- inferNf t'
 >        case (t', ty) of
 >            (Pair fs _, _ :* tysn) -> return (tysn @@ fs)
->            _                      -> tyError ExpectingPair
+>            _                      -> tyError (ExpectingPair (slam t) (slam ty))
 > infer (t :∈ ty) = ty <$ t ∈ ty
-> infer _ = tyError NotAnnotated
+> infer t = tyError (NotAnnotated (slam t))
 >
-> inferNf :: (Eq v, HasName v) => Tm v -> TCM v (Ty v)
+> inferNf :: (Slam v) => Tm v -> TCM v (Ty v)
 > inferNf t = nf <$> infer t
 >
-> inferBind :: (Eq v, HasName v) => Tm v -> Tm (Var v) -> TCM v (Tm v)
+> inferBind :: (Slam v) => Tm v -> Tm (Var v) -> TCM v (Tm v)
 > inferBind ty s = do ty ∈ Ty; nest ty (s ∈ Ty); return Ty
 >
-> (∈) :: (Eq v, HasName v) => Tm v -> Ty v -> TCM v ()
+> (∈) :: (Slam v) => Tm v -> Ty v -> TCM v ()
 > t₀ ∈ ty₀ = check (nf t₀) ty₀
 >   where
->     check :: (Eq v, HasName v) => Tm v -> Ty v -> TCM v ()
+>     check :: (Slam v) => Tm v -> Ty v -> TCM v ()
 >     check (Absurd t) _ = check t Empty
 >     check (Lam s) (dom :→ cod) = nest dom (check s cod)
 >     check (Pair fs sn) (tyfs :* tysn) =
 >         do check fs tyfs; check sn (tysn @@ fs)
 >     check t ty =
 >         do tyt <- inferNf t
->            unless (ty == tyt) (tyError Mismatch)
+>            unless (ty == tyt) (tyError (Mismatch (slam ty) (slam t) (slam tyt)))
 
 A REPL
 ----
