@@ -18,13 +18,13 @@ TODO fixities
 > import Control.Monad.State (StateT, runStateT, State, evalState, get, gets, put, lift)
 > import Data.Foldable (Foldable, msum)
 > import Data.Map (Map)
+> import qualified Data.Map as Map
 > import Data.Maybe (fromMaybe)
 > import Data.Traversable (Traversable, traverse)
 > import Text.Parsec ((<?>))
+> import qualified Text.Parsec as P
 > import Text.Parsec.String
 > import Text.PrettyPrint (Doc, (<+>), (<>))
-> import qualified Data.Map as Map
-> import qualified Text.Parsec as P
 > import qualified Text.PrettyPrint as PP
 
 Term representation
