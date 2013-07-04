@@ -12,23 +12,20 @@ TODO fixities
 > {-# LANGUAGE FlexibleInstances #-}
 > {-# LANGUAGE OverloadedStrings #-}
 > {-# LANGUAGE TypeSynonymInstances #-}
-> {-# OPTIONS_GHC -fno-warn-orphans #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 > import Control.Arrow (first)
 > import Control.Monad (liftM, ap, unless, void)
-> import Control.Monad.State
->     (StateT, runStateT, State, evalState, get, gets, put, lift)
+> import Control.Monad.State (StateT, runStateT, State, evalState, get, gets, put, lift)
 > import Data.Foldable (Foldable, msum)
 > import Data.Map (Map)
 > import Data.Maybe (fromMaybe)
-> import Data.String (IsString(..))
 > import Data.Traversable (Traversable, traverse)
-> import Text.PrettyPrint.Leijen (Pretty(..), Doc, (<+>), (<>))
-> import qualified Data.Map as Map
-> import qualified Text.PrettyPrint.Leijen as PP
 > import Text.Parsec ((<?>))
-> import qualified Text.Parsec as P
 > import Text.Parsec.String
+> import Text.PrettyPrint (Doc, (<+>), (<>))
+> import qualified Data.Map as Map
+> import qualified Text.Parsec as P
+> import qualified Text.PrettyPrint as PP
 
 Term representation
 ----
@@ -228,24 +225,24 @@ Pretty printing
 > boundName' :: (Foldable m, Monad m) => Scope m Id -> PPM (Id, m Id)
 > boundName' s = first (fromMaybe "_") <$> boundName s
 >
-> instance IsString Doc where
->     fromString = PP.text
+> ppPretty :: Tm Id -> String
+> ppPretty t = PP.render (evalState (ppPretty' (slam t)) Map.empty)
 >
-> ppPretty :: Tm Id -> PPM Doc
-> ppPretty Ty             = return "Ty"
-> ppPretty (Var v)        = return (PP.text (name v))
-> ppPretty Unit           = return "Unit"
-> ppPretty Tt             = return "tt"
-> ppPretty Empty          = return "Empty"
-> ppPretty (Absurd t)     = fmap ("absurd" <+>) (ppParens t)
-> ppPretty t@(_ :→ _)     = ppArr t
-> ppPretty t@(Lam _)      = ppLam t
-> ppPretty t@(_ :@ _)     = ppApps t
-> ppPretty (fsty :* snty) = ppBinder "->" ppApps fsty snty
-> ppPretty (Pair fs ty)   = middle ", " (ppApps fs) (ppApps ty)
-> ppPretty (Fst t)        = fmap ("fst" <+>) (ppParens t)
-> ppPretty (Snd t)        = fmap ("snd" <+>) (ppParens t)
-> ppPretty (t :∈ ty)      = ppTyped t ty
+> ppPretty' :: Tm Id -> PPM Doc
+> ppPretty' Ty             = return "Ty"
+> ppPretty' (Var v)        = return (PP.text (name v))
+> ppPretty' Unit           = return "Unit"
+> ppPretty' Tt             = return "tt"
+> ppPretty' Empty          = return "Empty"
+> ppPretty' (Absurd t)     = fmap ("absurd" <+>) (ppParens t)
+> ppPretty' t@(_ :→ _)     = ppArr t
+> ppPretty' t@(Lam _)      = ppLam t
+> ppPretty' t@(_ :@ _)     = ppApps t
+> ppPretty' (fsty :* snty) = ppBinder "->" ppApps fsty snty
+> ppPretty' (Pair fs ty)   = middle ", " (ppApps fs) (ppApps ty)
+> ppPretty' (Fst t)        = fmap ("fst" <+>) (ppParens t)
+> ppPretty' (Snd t)        = fmap ("snd" <+>) (ppParens t)
+> ppPretty' (t :∈ ty)      = ppTyped t ty
 >
 > compound :: Tm v -> Bool
 > compound Ty      = False
@@ -256,7 +253,7 @@ Pretty printing
 > compound _       = True
 >
 > ppParens :: Tm Id -> PPM Doc
-> ppParens t = if compound t then PP.parens <$> ppPretty t else ppPretty t
+> ppParens t = if compound t then PP.parens <$> ppPretty' t else ppPretty' t
 >
 > ppArr :: Tm Id -> PPM Doc
 > ppArr (dom :→ cod) = ppBinder "->" ppArr dom cod
@@ -290,9 +287,7 @@ Pretty printing
 >
 > ppTyped :: Tm Id -> Ty Id -> PPM Doc
 > ppTyped t₁ t₂ = middle " : " (ppApps t₁) (ppApps t₂)
->
-> instance (Ord v, HasName v) => Pretty (Tm v) where
->      pretty t = evalState (ppPretty (slam t)) Map.empty
+
 
 Reduction
 ----
