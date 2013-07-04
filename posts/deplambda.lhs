@@ -26,12 +26,24 @@ TODO fixities
 
 > type Scope m v = m (Var v)
 > data Tm v
->     = Ty
->     | Var v
->     | Tm v :@ Tm v
->     | Lam (Scope Tm v)
->     | Ty v :-> Scope Ty v
->     | Tm v :∈ Ty v
+>     = Ty                      -- The type of types
+>     | Var v                   -- A variable
+>
+>     | Unit                    -- Top, (), ...
+>     | Tt                      -- Trivial inhabitant of Unit
+>     | Empty                   -- Void
+>     | Absurd (Tm v)           -- Ex falso quodlibet
+>
+>     | Ty v :→ Scope Ty v      -- Dependent arrow
+>     | Lam (Scope Tm v)        -- Abstraction
+>     | Tm v :@ Tm v            -- Application
+>
+>     | Ty v :* Scope Ty v      -- Dependent product
+>     | Pair (Tm v) (Tm v)
+>     | Fst (Tm v)
+>     | Snd (Tm v)
+
+>     | Tm v :∈ Ty v            -- Annotated type
 >     deriving (Eq, Show, Functor)
 > type Ty = Tm
 
@@ -42,12 +54,20 @@ TODO fixities
 > instance Monad Tm where
 >     return = Var
 >
->     Ty          >>= _ = Ty
->     Var v       >>= f = f v
->     t₁ :@ t₂    >>= f = (t₁ >>= f) :@ (t₂ >>= f)
->     t  :∈ ty    >>= f = (t  >>= f) :∈ (ty >>= f)
->     Lam s       >>= f = Lam (s >>>= f)
->     ty₁ :-> ty₂ >>= f = (ty₁ >>= f) :-> (ty₂ >>>= f)
+>     Ty           >>= _ = Ty
+>     Var v        >>= f = f v
+>     Unit         >>= _ = Unit
+>     Tt           >>= _ = Tt
+>     Empty        >>= _ = Empty
+>     Absurd t     >>= f = Absurd (t >>= f)
+>     dom :→ cod   >>= f = (dom >>= f) :→ (cod >>>= f)
+>     Lam s        >>= f = Lam (s >>>= f)
+>     t₁ :@ t₂     >>= f = (t₁ >>= f) :@ (t₂ >>= f)
+>     tyfs :* tysn >>= f = (tyfs >>= f) :* (tysn >>>= f)
+>     Pair t₁ t₂   >>= f = Pair (t₁ >>= f) (t₂ >>= f)
+>     Fst t        >>= f = Fst (t >>= f)
+>     Snd t        >>= f = Snd (t >>= f)
+>     t  :∈ ty     >>= f = (t  >>= f) :∈ (ty >>= f)
 >
 > (>>>=) :: (Monad m) => Scope m a -> (a -> m b) -> Scope m b
 > s >>>= f = s >>= bump
@@ -96,12 +116,24 @@ Blah blah.[^gadt]
 > nestDefs defs = defs ◁ Def Nothing
 
 > (⇓) :: Defs v -> Tm v -> Tm v
-> _   ⇓ Ty            = Ty
-> defs ⇓ Var v         = maybe (Var v) (defs ⇓) (unDefs (defs v))
-> defs ⇓ (t₁ :@ t₂)    = (defs ⇓ t₁) :@ (defs ⇓ t₂)
-> defs ⇓ (t  :∈ ty)    = (defs ⇓ t ) :∈ (defs ⇓ ty)
-> defs ⇓ Lam s         = Lam (nestDefs defs ⇓ s)
-> defs ⇓ (ty₁ :-> ty₂) = (defs ⇓ ty₁) :-> (nestDefs defs ⇓ ty₂)
+> _    ⇓ Ty             = Ty
+> defs ⇓ Var v          = maybe (Var v) (defs ⇓) (unDefs (defs v))
+> _    ⇓ Unit           = Unit
+> _    ⇓ Tt             = Tt
+> _    ⇓ Empty          = Empty
+> defs ⇓ Absurd t       = Absurd (defs ⇓ t)
+> defs ⇓ (dom :→ cod)   = (defs ⇓ dom) :→ (nestDefs defs ⇓ cod)
+> defs ⇓ Lam s          = Lam (nestDefs defs ⇓ s)
+> defs ⇓ (t₁ :@ t₂)     = (defs ⇓ t₁) :@ (defs ⇓ t₂)
+> defs ⇓ (tyfs :* tysn) = (defs ⇓ tyfs) :* (nestDefs defs ⇓ tysn)
+> defs ⇓ Pair fs sn     = Pair (defs ⇓ fs) (defs ⇓ sn)
+> defs ⇓ Fst t          = case defs ⇓ t of
+>                             Pair fs _ -> fs
+>                             t'        -> t'
+> defs ⇓ Snd t          = case defs ⇓ t of
+>                             Pair _ sn -> sn
+>                             t'        -> t'
+> defs ⇓ (t :∈ ty)      = (defs ⇓ t ) :∈ (defs ⇓ ty)
 
 > class HasName a where
 >     name :: a -> Id
@@ -115,7 +147,9 @@ Blah blah.[^gadt]
 >     = OutOfBounds Id
 >     | TyError String
 >     | ExpectingFunction       -- TODO better
+>     | ExpectingPair           -- TODO better
 >     | Mismatch                -- TODO better
+>     | NotAnnotated            -- TODO better
 >
 > type TCM v = StateT (Defs v, Tys v) (Either TyError)
 >
@@ -140,23 +174,46 @@ Blah blah.[^gadt]
 > infer :: (Eq v, HasName v) => Tm v -> TCM v (Ty v)
 > infer Ty = return Ty
 > infer (Var v) = getTys <*> return v
+> infer Unit = return Ty
+> infer Tt = return Unit
+> infer Empty = return Ty
+> infer (dom :→ cod) = inferBind dom cod
 > infer (t₁ :@ t₂) =
 >     do ty₁ <- inferNf t₁
 >        case ty₁ of
->            dom :-> cod -> (cod @@ dom) <$ (t₂ ∈ dom)
->            _           -> tyError ExpectingFunction
+>            dom :→ cod -> (cod @@ dom) <$ (t₂ ∈ dom)
+>            _          -> tyError ExpectingFunction
+> infer (tyfs :* tysn) = inferBind tyfs tysn
+> infer (Fst t) =
+>     do ty <- inferNf t
+>        case ty of
+>            tyfs :* _ -> return tyfs
+>            _         -> tyError ExpectingPair
+> infer (Snd t) =
+>     do t' <- nf t
+>        ty <- inferNf t'
+>        case (t', ty) of
+>            (Pair fs _, _ :* tysn) -> return (tysn @@ fs)
+>            _                      -> tyError ExpectingPair
+> infer _ = tyError NotAnnotated
 >
 > inferNf :: (Eq v, HasName v) => Tm v -> TCM v (Ty v)
 > inferNf t = nf =<< infer t
+>
+> inferBind :: (Eq v, HasName v) => Tm v -> Tm (Var v) -> TCM v (Tm v)
+> inferBind ty s = do ty ∈ Ty; nest ty (s ∈ Ty); return Ty
 >
 > (∈) :: (Eq v, HasName v) => Tm v -> Ty v -> TCM v ()
 > t₀ ∈ ty₀ = (`check` ty₀) =<< nf t₀
 >   where
 >     check :: (Eq v, HasName v) => Tm v -> Ty v -> TCM v ()
->     check (Lam s) (dom :-> cod) = nest dom (check s cod)
+>     check (Absurd t) _ = check t Empty
+>     check (Lam s) (dom :→ cod) = nest dom (check s cod)
+>     check (Pair fs sn) (tyfs :* tysn) =
+>         do check fs tyfs; check sn (tysn @@ fs)
 >     check t ty =
->       do tyt <- inferNf t
->          unless (ty == tyt) (tyError Mismatch)
+>         do tyt <- inferNf t
+>            unless (ty == tyt) (tyError Mismatch)
 
 > main :: IO ()
 > main = undefined
