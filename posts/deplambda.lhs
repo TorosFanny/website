@@ -26,6 +26,8 @@ TODO fixities
 > import Text.PrettyPrint.Leijen (Pretty(..), Doc, (<+>), (<>))
 > import qualified Data.Map as Map
 > import qualified Text.PrettyPrint.Leijen as PP
+> import qualified Text.Parsec as P
+> import Text.Parsec.String
 
 Term representation
 ----
@@ -114,6 +116,9 @@ Term representation
 Parsing
 ----
 
+> pParse :: Parser (Tm Id)
+> pParse = undefined
+
 Pretty printing
 ----
 
@@ -144,7 +149,6 @@ Pretty printing
 >                c = fromMaybe 0 (Map.lookup n idcount)
 >            c <$ put (Map.insert v c vcount, Map.insert n (c + 1) idcount)
 
->
 > type PPM = State (Map Id Count)
 >
 > boundName :: (Foldable m, Monad m) => Scope m Id -> PPM (Maybe Id, m Id)
@@ -244,8 +248,6 @@ Blah blah.[^gadt]
 < lookCtx (_   :◁ t) (Bound _) = Just (Free <$> t)
 
 > type Ctx v m = v -> Maybe (m v)
-> type Tys v = Ctx v Ty
-> type Defs v = Ctx v Tm
 >
 > ε :: Ctx v m
 > ε = const Nothing
@@ -263,28 +265,25 @@ Blah blah.[^gadt]
 Reduction
 ----
 
-> nestDefs :: Defs v -> Defs (Var v)
-> nestDefs defs = defs ◁◁ Nothing
-
-> (⇓) :: Defs v -> Tm v -> Tm v
-> _    ⇓ Ty             = Ty
-> defs ⇓ Var v          = maybe (Var v) (defs ⇓) (defs v)
-> _    ⇓ Unit           = Unit
-> _    ⇓ Tt             = Tt
-> _    ⇓ Empty          = Empty
-> defs ⇓ Absurd t       = Absurd (defs ⇓ t)
-> defs ⇓ (dom :→ cod)   = (defs ⇓ dom) :→ (nestDefs defs ⇓ cod)
-> defs ⇓ Lam s          = Lam (nestDefs defs ⇓ s)
-> defs ⇓ (t₁ :@ t₂)     = (defs ⇓ t₁) :@ (defs ⇓ t₂)
-> defs ⇓ (tyfs :* tysn) = (defs ⇓ tyfs) :* (nestDefs defs ⇓ tysn)
-> defs ⇓ Pair fs sn     = Pair (defs ⇓ fs) (defs ⇓ sn)
-> defs ⇓ Fst t          = case defs ⇓ t of
->                             Pair fs _ -> fs
->                             t'        -> t'
-> defs ⇓ Snd t          = case defs ⇓ t of
->                             Pair _ sn -> sn
->                             t'        -> t'
-> defs ⇓ (t :∈ ty)      = (defs ⇓ t ) :∈ (defs ⇓ ty)
+> nf :: Tm v -> Tm v
+> nf Ty             = Ty
+> nf t@(Var _)      = t
+> nf Unit           = Unit
+> nf Tt             = Tt
+> nf Empty          = Empty
+> nf (Absurd t)     = Absurd (nf t)
+> nf (dom :→ cod)   = nf dom :→ nf cod
+> nf (Lam s)        = Lam (nf s)
+> nf (t₁ :@ t₂)     = nf t₁ :@ nf t₂
+> nf (tyfs :* tysn) = nf tyfs :* nf tysn
+> nf (Pair fs sn)   = Pair (nf fs) (nf sn)
+> nf (Fst t)        = case nf t of
+>                         Pair fs _ -> fs
+>                         t'        -> t'
+> nf (Snd t)        = case nf t of
+>                         Pair _ sn -> sn
+>                         t'        -> t'
+> nf (t :∈ ty)      = nf t :∈ nf ty
 
 A Monad
 ----
@@ -297,26 +296,24 @@ A Monad
 >     | Mismatch                -- TODO better
 >     | NotAnnotated            -- TODO better
 >
-> type TCM v = StateT (Defs v, Tys v) (Either TyError)
+> type Tys v = Ctx v Ty
+> type TCM v = StateT (Tys v) (Either TyError)
 >
 > tyError :: TyError -> TCM v a
 > tyError = lift . Left
 >
 > lookupTy :: (HasName v) => v -> TCM v (Ty v)
 > lookupTy v =
->   do tys <- gets snd
+>   do tys <- get
 >      maybe (tyError (OutOfBounds (name v))) return (tys v)
->
-> nf :: HasName v => Tm v -> TCM v (Tm v)
-> nf t = (⇓ t) <$> gets fst
 
 Type checking
 ----
 
 > nest :: Ty v -> TCM (Var v) a -> TCM v a
 > nest ty m =
->     do (defs, tys) <- get
->        case runStateT m (nestDefs defs, tys ◁ ty) of
+>     do tys <- get
+>        case runStateT m (tys ◁ ty) of
 >            Left err     -> tyError err
 >            Right (x, _) -> return x
 >
@@ -339,7 +336,7 @@ Type checking
 >            tyfs :* _ -> return tyfs
 >            _         -> tyError ExpectingPair
 > infer (Snd t) =
->     do t' <- nf t
+>     do let t' = nf t
 >        ty <- inferNf t'
 >        case (t', ty) of
 >            (Pair fs _, _ :* tysn) -> return (tysn @@ fs)
@@ -347,13 +344,13 @@ Type checking
 > infer _ = tyError NotAnnotated
 >
 > inferNf :: (Eq v, HasName v) => Tm v -> TCM v (Ty v)
-> inferNf t = nf =<< infer t
+> inferNf t = nf <$> infer t
 >
 > inferBind :: (Eq v, HasName v) => Tm v -> Tm (Var v) -> TCM v (Tm v)
 > inferBind ty s = do ty ∈ Ty; nest ty (s ∈ Ty); return Ty
 >
 > (∈) :: (Eq v, HasName v) => Tm v -> Ty v -> TCM v ()
-> t₀ ∈ ty₀ = (`check` ty₀) =<< nf t₀
+> t₀ ∈ ty₀ = check (nf t₀) ty₀
 >   where
 >     check :: (Eq v, HasName v) => Tm v -> Ty v -> TCM v ()
 >     check (Absurd t) _ = check t Empty
