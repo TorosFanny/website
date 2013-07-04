@@ -10,13 +10,16 @@ TODO fixities
 > {-# LANGUAGE FlexibleInstances #-}
 > {-# LANGUAGE DeriveFunctor #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$))
-> import Control.Monad (ap, unless)
+> import Control.Monad (ap, unless, liftM)
 > import Control.Monad.State (StateT, get, gets, runStateT, lift)
+
+Term representation
+----
 
 > type Id = String
 > newtype Name = Name Id
 >     deriving (Show)
-> instance Eq  Name where _ == _ = True
+> instance Eq Name where _ == _ = True
 
 > data Var v = Bound Name | Free v
 >     deriving (Eq, Show, Functor)
@@ -72,7 +75,7 @@ TODO fixities
 > (>>>=) :: (Monad m) => Scope m a -> (a -> m b) -> Scope m b
 > s >>>= f = s >>= bump
 >   where bump (Bound n) = return (Bound n)
->         bump (Free v)  = f v >>= return . Free
+>         bump (Free v)  = Free `liftM` f v
 
 > subst :: (Eq v, Monad m) => v -> m v -> m v -> m v
 > subst v t₁ t₂ =
@@ -91,6 +94,12 @@ TODO fixities
 >     do v' <- t
 >        return (if v == v' then bound v else Free v')
 
+Parsing
+----
+
+Contexts
+----
+
 Blah blah.[^gadt]
 
 [^gadt]:
@@ -103,21 +112,26 @@ Blah blah.[^gadt]
 < lookCtx (ctx :◁ _) (Free v)  = fmap Free <$> lookCtx ctx v
 < lookCtx (_   :◁ t) (Bound _) = Just (Free <$> t)
 
-> type Ctx m v = v -> m v
+> type Ctx m v = v -> Maybe (m v)
 > type Tys v = Ctx Ty v
-> newtype Def v = Def {unDefs :: Maybe (Tm v)} deriving (Functor)
-> type Defs v = Ctx Def v
+> type Defs v = Ctx Tm v
+>
+> (◁◁) :: Functor m => Ctx m v -> Maybe (m v) -> Ctx m (Var v)
+> (ctx ◁◁ t) (Bound _) = fmap Free <$> t
+> (ctx ◁◁ t) (Free v)  = fmap Free <$> ctx v
 >
 > (◁) :: Functor m => Ctx m v -> m v -> Ctx m (Var v)
-> (ctx ◁ t) (Bound _) = Free <$> t
-> (ctx ◁ t) (Free v)  = Free <$> ctx v
->
+> ctx ◁ t = ctx ◁◁ Just t
+
+Reduction
+----
+
 > nestDefs :: Defs v -> Defs (Var v)
-> nestDefs defs = defs ◁ Def Nothing
+> nestDefs defs = defs ◁◁ Nothing
 
 > (⇓) :: Defs v -> Tm v -> Tm v
 > _    ⇓ Ty             = Ty
-> defs ⇓ Var v          = maybe (Var v) (defs ⇓) (unDefs (defs v))
+> defs ⇓ Var v          = maybe (Var v) (defs ⇓) (defs v)
 > _    ⇓ Unit           = Unit
 > _    ⇓ Tt             = Tt
 > _    ⇓ Empty          = Empty
@@ -135,14 +149,9 @@ Blah blah.[^gadt]
 >                             t'        -> t'
 > defs ⇓ (t :∈ ty)      = (defs ⇓ t ) :∈ (defs ⇓ ty)
 
-> class HasName a where
->     name :: a -> Id
-> instance HasName Id where
->     name = id
-> instance HasName v => HasName (Var v) where
->     name (Free v)         = name v
->     name (Bound (Name n)) = n
->
+A Monad
+----
+
 > data TyError
 >     = OutOfBounds Id
 >     | TyError String
@@ -156,11 +165,28 @@ Blah blah.[^gadt]
 > tyError :: TyError -> TCM v a
 > tyError = lift . Left
 >
-> getDefs :: TCM v (Defs v)
-> getDefs = gets fst
-> getTys :: TCM v (Tys v)
-> getTys = gets snd
+> lookupTy :: (HasName v) => v -> TCM v (Ty v)
+> lookupTy v =
+>   gets snd <*> pure v >>=
+>   maybe (tyError (OutOfBounds (name v))) return
 >
+> nf :: HasName v => Tm v -> TCM v (Tm v)
+> nf t = (⇓ t) <$> gets fst
+
+Pretty printing
+----
+
+> class HasName a where
+>     name :: a -> Id
+> instance HasName Id where
+>     name = id
+> instance HasName v => HasName (Var v) where
+>     name (Free v)         = name v
+>     name (Bound (Name n)) = n
+
+Type checking
+----
+
 > nest :: Ty v -> TCM (Var v) a -> TCM v a
 > nest ty m =
 >     do (defs, tys) <- get
@@ -168,12 +194,9 @@ Blah blah.[^gadt]
 >            Left err     -> tyError err
 >            Right (x, _) -> return x
 >
-> nf :: HasName v => Tm v -> TCM v (Tm v)
-> nf t = (⇓ t) <$> getDefs
->
 > infer :: (Eq v, HasName v) => Tm v -> TCM v (Ty v)
 > infer Ty = return Ty
-> infer (Var v) = getTys <*> return v
+> infer (Var v) = lookupTy v
 > infer Unit = return Ty
 > infer Tt = return Unit
 > infer Empty = return Ty
@@ -214,6 +237,9 @@ Blah blah.[^gadt]
 >     check t ty =
 >         do tyt <- inferNf t
 >            unless (ty == tyt) (tyError Mismatch)
+
+A REPL
+----
 
 > main :: IO ()
 > main = undefined
