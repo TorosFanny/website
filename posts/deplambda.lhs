@@ -10,10 +10,8 @@ TODO fixities
 > {-# LANGUAGE DeriveFunctor #-}
 > {-# LANGUAGE DeriveTraversable #-}
 > {-# LANGUAGE FlexibleInstances #-}
-> {-# LANGUAGE GADTs #-}
 > {-# LANGUAGE OverloadedStrings #-}
 > {-# LANGUAGE TypeSynonymInstances #-}
-> {-# LANGUAGE NoMonomorphismRestriction #-}
 > {-# OPTIONS_GHC -fno-warn-orphans #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$))
 > import Control.Arrow (first)
