@@ -6,12 +6,26 @@ published: false
 
 TODO fixities
 
-> {-# LANGUAGE TypeSynonymInstances #-}
-> {-# LANGUAGE FlexibleInstances #-}
+> {-# LANGUAGE DeriveFoldable #-}
 > {-# LANGUAGE DeriveFunctor #-}
+> {-# LANGUAGE DeriveTraversable #-}
+> {-# LANGUAGE FlexibleInstances #-}
+> {-# LANGUAGE GADTs #-}
+> {-# LANGUAGE OverloadedStrings #-}
+> {-# LANGUAGE TypeSynonymInstances #-}
+> {-# LANGUAGE NoMonomorphismRestriction #-}
+> {-# OPTIONS_GHC -fno-warn-orphans #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$))
-> import Control.Monad (ap, unless, liftM)
-> import Control.Monad.State (StateT, get, gets, runStateT, lift)
+> import Control.Arrow (first)
+> import Control.Monad.State
+> import Data.Foldable (Foldable, foldMap)
+> import Data.Map (Map)
+> import Data.Maybe (fromMaybe)
+> import Data.String (IsString(..))
+> import Data.Traversable (Traversable, traverse)
+> import Text.PrettyPrint.Leijen (Pretty(..), Doc, (<+>), (<>))
+> import qualified Data.Map as Map
+> import qualified Text.PrettyPrint.Leijen as PP
 
 Term representation
 ----
@@ -22,7 +36,7 @@ Term representation
 > instance Eq Name where _ == _ = True
 
 > data Var v = Bound Name | Free v
->     deriving (Eq, Show, Functor)
+>     deriving (Eq, Show, Functor, Foldable, Traversable)
 >
 > bound :: Id -> Var Id
 > bound = Bound . Name
@@ -45,9 +59,9 @@ Term representation
 >     | Pair (Tm v) (Tm v)
 >     | Fst (Tm v)
 >     | Snd (Tm v)
-
+>
 >     | Tm v :∈ Ty v            -- Annotated type
->     deriving (Eq, Show, Functor)
+>     deriving (Eq, Show, Functor, Foldable, Traversable)
 > type Ty = Tm
 
 > instance Applicative Tm where
@@ -70,18 +84,13 @@ Term representation
 >     Pair t₁ t₂   >>= f = Pair (t₁ >>= f) (t₂ >>= f)
 >     Fst t        >>= f = Fst (t >>= f)
 >     Snd t        >>= f = Snd (t >>= f)
->     t  :∈ ty     >>= f = (t  >>= f) :∈ (ty >>= f)
+>     t :∈ ty      >>= f = (t  >>= f) :∈ (ty >>= f)
 >
 > (>>>=) :: (Monad m) => Scope m a -> (a -> m b) -> Scope m b
 > s >>>= f = s >>= bump
 >   where bump (Bound n) = return (Bound n)
 >         bump (Free v)  = Free `liftM` f v
 
-> subst :: (Eq v, Monad m) => v -> m v -> m v -> m v
-> subst v t₁ t₂ =
->     do v' <- t₂
->        if v == v' then t₂ else return v'
->
 > (@@) :: (Monad m) => Scope m v -> m v -> m v
 > s @@ t =
 >     do v <- s
@@ -94,8 +103,129 @@ Term representation
 >     do v' <- t
 >        return (if v == v' then bound v else Free v')
 
+> lam :: Id -> Tm Id -> Tm Id
+> lam n t = Lam (abstract n t)
+>
+> arr, prod :: Id -> Ty Id -> Ty Id -> Ty Id
+> arr  n ty₁ ty₂ = ty₁ :→ abstract n ty₂
+> prod n ty₁ ty₂ = ty₁ :* abstract n ty₂
+
 Parsing
 ----
+
+Pretty printing
+----
+
+> class HasName a where
+>     name :: a -> Id
+> instance HasName Id where
+>     name = id
+> instance HasName v => HasName (Var v) where
+>     name (Free v)         = name v
+>     name (Bound (Name n)) = n
+
+> type Count = Int
+> nameCount :: Id -> Count -> Id
+> nameCount n c = n ++ if c == 0 then "" else show c
+
+> slam :: (Ord v, HasName v) => Tm v -> Tm Id
+> slam t = evalState (traverse fresh t)
+>                    (Map.empty :: Map v Count, Map.empty :: Map Id Count)
+>   where
+>     fresh v =
+>         do vcount <- gets fst
+>            c <- maybe (newCount v) return (Map.lookup v vcount)
+>            return (nameCount (name v) c)
+>
+>     newCount v =
+>         do (vcount, idcount) <- get
+>            let n = name v
+>                c = fromMaybe 0 (Map.lookup n idcount)
+>            c <$ put (Map.insert v c vcount, Map.insert n (c + 1) idcount)
+
+>
+> type PPM = State (Map Id Count)
+>
+> boundName :: (Foldable m, Monad m) => Scope m Id -> PPM (Maybe Id, m Id)
+> boundName t =
+>     case foldMap f t of
+>         Nothing -> return (Nothing, t @@ undefined)
+>         Just n  -> do idcount <- get
+>                       let c  = fromMaybe 0 (Map.lookup n idcount)
+>                           n' = nameCount n c
+>                       (Just n', t @@ return n') <$ put (Map.insert n c idcount)
+>   where
+>     f (Bound (Name n)) = Just n
+>     f (Free _)         = Nothing
+>
+> boundName' :: (Foldable m, Monad m) => Scope m Id -> PPM (Id, m Id)
+> boundName' s = first (fromMaybe "_") <$> boundName s
+>
+> instance IsString Doc where
+>     fromString = PP.text
+>
+> ppPretty :: Tm Id -> PPM Doc
+> ppPretty Ty             = return "*"
+> ppPretty (Var v)        = return (PP.text (name v))
+> ppPretty Unit           = return "Unit"
+> ppPretty Tt             = return "tt"
+> ppPretty Empty          = return "Empty"
+> ppPretty (Absurd t)     = fmap ("absurd" <+>) (ppParens t)
+> ppPretty t@(_ :→ _)     = ppArr t
+> ppPretty t@(Lam _)      = ppLam t
+> ppPretty t@(_ :@ _)     = ppApps t
+> ppPretty (fsty :* snty) = ppBinder "->" ppApps fsty snty
+> ppPretty (Pair fs ty)   = middle ", " (ppApps fs) (ppApps ty)
+> ppPretty (Fst t)        = fmap ("fst" <+>) (ppParens t)
+> ppPretty (Snd t)        = fmap ("snd" <+>) (ppParens t)
+> ppPretty (t :∈ ty)      = ppTyped t ty
+>
+> compound :: Tm v -> Bool
+> compound Ty      = False
+> compound (Var _) = False
+> compound Unit    = False
+> compound Tt      = False
+> compound Empty   = False
+> compound _       = True
+>
+> ppParens :: Tm Id -> PPM Doc
+> ppParens t = if compound t then PP.parens <$> ppPretty t else ppPretty t
+>
+> ppArr :: Tm Id -> PPM Doc
+> ppArr (dom :→ cod) = ppBinder "->" ppArr dom cod
+> ppArr t            = ppApps t
+>
+> ppLam :: Tm Id -> PPM Doc
+> ppLam t₀ = fmap ("\\" <>) (go t₀)
+>   where
+>     go (Lam s) = do (arg, t) <- boundName' s; fmap (PP.text arg <+>) (go t)
+>     go t       = ppApps t
+>
+> ppApps :: Tm Id -> PPM Doc
+> ppApps (t₁ :@ t₂) = (<+>) <$> ppApps t₁ <*> ppParens t₂
+> ppApps t          = ppParens t
+>
+> middle :: String -> PPM Doc -> PPM Doc -> PPM Doc
+> middle s x₁ x₂ =
+>     do doc₁ <- x₁
+>        doc₂ <- x₂
+>        return (doc₁ <> PP.text s <> doc₂)
+>
+> ppBinder :: String -> (Tm Id -> PPM Doc) -> Tm Id -> Scope Tm Id -> PPM Doc
+> ppBinder tok pp ty₁ ty₂ =
+>     do ty₁doc      <- ppApps ty₁
+>        (arg, ty₂') <- boundName ty₂
+>        ty₂doc      <- pp ty₂'
+>        return (case arg of
+>                    Nothing -> ty₁doc
+>                    Just n  -> "[" <> PP.text n <+> ":" <+> ty₁doc <> "]"
+>                <+> PP.text tok <+> ty₂doc)
+>
+> ppTyped :: Tm Id -> Ty Id -> PPM Doc
+> ppTyped t₁ t₂ = middle " : " (ppApps t₁) (ppApps t₂)
+>
+> instance (Ord v, HasName v) => Pretty (Tm v) where
+>      pretty t = evalState (ppPretty (slam t)) Map.empty
 
 Contexts
 ----
@@ -112,15 +242,21 @@ Blah blah.[^gadt]
 < lookCtx (ctx :◁ _) (Free v)  = fmap Free <$> lookCtx ctx v
 < lookCtx (_   :◁ t) (Bound _) = Just (Free <$> t)
 
-> type Ctx m v = v -> Maybe (m v)
-> type Tys v = Ctx Ty v
-> type Defs v = Ctx Tm v
+> type Ctx v m = v -> Maybe (m v)
+> type Tys v = Ctx v Ty
+> type Defs v = Ctx v Tm
 >
-> (◁◁) :: Functor m => Ctx m v -> Maybe (m v) -> Ctx m (Var v)
-> (ctx ◁◁ t) (Bound _) = fmap Free <$> t
-> (ctx ◁◁ t) (Free v)  = fmap Free <$> ctx v
+> ε :: Ctx v m
+> ε = const Nothing
 >
-> (◁) :: Functor m => Ctx m v -> m v -> Ctx m (Var v)
+> insert :: (Eq v) => v -> m v -> Ctx v m -> Ctx v m
+> insert v x ctx v' = if v == v' then Just x else ctx v'
+>
+> (◁◁) :: Functor m => Ctx v m -> Maybe (m v) -> Ctx (Var v) m
+> (_   ◁◁ t) (Bound _) = fmap Free <$> t
+> (ctx ◁◁ _) (Free v)  = fmap Free <$> ctx v
+>
+> (◁) :: Functor m => Ctx v m -> m v -> Ctx (Var v) m
 > ctx ◁ t = ctx ◁◁ Just t
 
 Reduction
@@ -167,22 +303,11 @@ A Monad
 >
 > lookupTy :: (HasName v) => v -> TCM v (Ty v)
 > lookupTy v =
->   gets snd <*> pure v >>=
->   maybe (tyError (OutOfBounds (name v))) return
+>   do tys <- gets snd
+>      maybe (tyError (OutOfBounds (name v))) return (tys v)
 >
 > nf :: HasName v => Tm v -> TCM v (Tm v)
 > nf t = (⇓ t) <$> gets fst
-
-Pretty printing
-----
-
-> class HasName a where
->     name :: a -> Id
-> instance HasName Id where
->     name = id
-> instance HasName v => HasName (Var v) where
->     name (Free v)         = name v
->     name (Bound (Name n)) = n
 
 Type checking
 ----
