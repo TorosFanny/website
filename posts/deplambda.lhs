@@ -17,8 +17,9 @@ TODO fixities
 > {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 > import Control.Arrow (first)
-> import Control.Monad (liftM, ap, unless)
-> import Control.Monad.State (StateT, runStateT, State, evalState, get, gets, put, modify, lift)
+> import Control.Monad (liftM, ap, unless, join)
+> import Control.Monad.State (StateT, runStateT, evalStateT, State, evalState, get, gets, put, modify, lift)
+> import Control.Monad.Error (ErrorT, runErrorT, throwError, Error(..))
 > import Data.Foldable (Foldable, msum, toList)
 > import Data.Map (Map)
 > import qualified Data.Map as Map
@@ -66,7 +67,7 @@ Term representation
 >     | Snd (Tm v)
 >
 >     | Tm v :∈ Ty v            -- Annotated type
->     deriving (Eq, Show, Functor, Foldable, Traversable)
+>     deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 > type Ty = Tm
 
 > instance Applicative Tm where
@@ -220,10 +221,11 @@ Pretty printing
 > boundName t =
 >     case msum (f `liftM` t) of
 >         Nothing -> return (Nothing, t @@ undefined)
->         Just n  -> do idcount <- get
->                       let c  = fromMaybe 0 (Map.lookup n idcount)
->                           n' = nameCount n c
->                       (Just n', t @@ return n') <$ put (Map.insert n c idcount)
+>         Just n ->
+>             do idcount <- get
+>                let c  = fromMaybe 0 (Map.lookup n idcount)
+>                    n' = nameCount n c
+>                (Just n', t @@ return n') <$ put (Map.insert n c idcount)
 >   where
 >     f (Bound (Name n)) = Just n
 >     f (Free _)         = Nothing
@@ -334,9 +336,6 @@ Blah blah.[^gadt]
 
 > type Ctx v m = v -> Maybe (m v)
 >
-> ε :: Ctx v m
-> ε = const Nothing
->
 > insert :: (Eq v) => v -> m v -> Ctx v m -> Ctx v m
 > insert v x ctx v' = if v == v' then Just x else ctx v'
 >
@@ -355,17 +354,20 @@ Type checking
 >     | NotAnnotated (Tm Id)
 >     | ParseError ParseError
 >
-> expectingFun :: (Slam v) => Tm v -> Tm v -> TCM v a
-> expectingFun t ty = tyError (ExpectingFun (slam t) (slam ty))
-> expectingProd :: (Slam v) => Tm v -> Tm v -> TCM v a
-> expectingProd t ty = tyError (ExpectingProd (slam t) (slam ty))
+> instance Error TyError where
+>     noMsg = undefined
+>
+> expectingFun :: (Monad m, Slam v) => Tm v -> Tm v -> TCMT m v a
+> expectingFun t ty = throwError (ExpectingFun (slam t) (slam ty))
+> expectingProd :: (Monad m, Slam v) => Tm v -> Tm v -> TCMT m v a
+> expectingProd t ty = throwError (ExpectingProd (slam t) (slam ty))
 >
 > nest4 :: Doc -> Doc
 > nest4 = PP.nest 4
 >
 > ppError :: TyError -> Doc
 > ppError (OutOfBounds n) =
->     "Out of bound variable `" <> ppQuote (PP.text n) <> "'"
+>     "Out of bound variable `" <> PP.text n <> "'"
 > ppError (ExpectingFun t ty) =
 >     "Expecting function type for term:" $$ nest4 (ppTm t) $$
 >     "instead of:" $$ nest4 (ppTm ty)
@@ -380,28 +382,26 @@ Type checking
 >     "Unannotated canonical term:" $$ nest4 (ppTm t)
 > ppError (ParseError err) = PP.text (show err)
 
-> ppQuote :: Doc -> Doc
-> ppQuote d = "`" <> d <> "'"
->
 > type Tys v = Ctx v Ty
-> type TCM v = StateT (Tys v) (Either TyError)
+> type TCMT m v = StateT (Tys v) (ErrorT TyError m)
 >
-> tyError :: TyError -> TCM v a
-> tyError = lift . Left
+> runTCMT :: TCMT m v a -> Tys v -> m (Either TyError (a, Tys v))
+> runTCMT m = runErrorT . runStateT m
 >
-> lookupTy :: (Slam v) => v -> TCM v (Ty v)
+> lookupTy :: (Slam v, Monad m) => v -> TCMT m v (Ty v)
 > lookupTy v =
 >   do tys <- get
->      maybe (tyError (OutOfBounds (name v))) return (tys v)
+>      maybe (throwError (OutOfBounds (name v))) return (tys v)
 
-> nest :: Ty v -> TCM (Var v) a -> TCM v a
+> nest :: (Monad m) => Ty v -> TCMT m (Var v) a -> TCMT m v a
 > nest ty m =
 >     do tys <- get
->        case runStateT m (tys ◁ ty) of
->            Left err     -> tyError err
->            Right (x, _) -> return x
+>        res <- lift . lift $ runErrorT (evalStateT m (tys ◁ ty))
+>        case res of
+>            Left err -> throwError err
+>            Right x  -> return x
 >
-> infer :: (Slam v) => Tm v -> TCM v (Ty v)
+> infer :: (Functor m, Monad m, Slam v) => Tm v -> TCMT m v (Ty v)
 > infer Ty = return Ty
 > infer (Var v) = lookupTy v
 > infer Unit = return Ty
@@ -426,18 +426,18 @@ Type checking
 >            (Pair fs _, _ :* tysn) -> return (tysn @@ fs)
 >            _                      -> expectingProd t ty
 > infer (t :∈ ty) = ty <$ t ∈ ty
-> infer t = tyError (NotAnnotated (slam t))
+> infer t = throwError (NotAnnotated (slam t))
 >
-> inferNf :: (Slam v) => Tm v -> TCM v (Ty v)
+> inferNf :: (Functor m, Monad m, Slam v) => Tm v -> TCMT m v (Ty v)
 > inferNf t = nf <$> infer t
 >
-> inferBind :: (Slam v) => Tm v -> Tm (Var v) -> TCM v (Tm v)
+> inferBind :: (Functor m, Monad m, Slam v) => Tm v -> Tm (Var v) -> TCMT m v (Tm v)
 > inferBind ty s = do ty ∈ Ty; nest ty (s ∈ Ty); return Ty
 >
-> (∈) :: (Slam v) => Tm v -> Ty v -> TCM v ()
+> (∈) :: (Functor m, Monad m, Slam v) => Tm v -> Ty v -> TCMT m v ()
 > t₀ ∈ ty₀ = check (nf t₀) ty₀
 >   where
->     check :: (Slam v) => Tm v -> Ty v -> TCM v ()
+>     check :: (Functor m, Monad m, Slam v) => Tm v -> Ty v -> TCMT m v ()
 >     check (Absurd t) _ = check t Empty
 >     check (Lam s) (dom :→ cod) = nest dom (check s cod)
 >     check t@(Lam _) ty = expectingFun t ty
@@ -446,13 +446,13 @@ Type checking
 >     check t@(Pair _ _) ty = expectingProd t ty
 >     check t ty =
 >         do tyt <- inferNf t
->            unless (ty == tyt) (tyError (Mismatch (slam ty) (slam t) (slam tyt)))
+>            unless (ty == tyt) (throwError (Mismatch (slam ty) (slam t) (slam tyt)))
 
 A REPL
 ----
 
 > data Def = Def Id (Ty Id) (Maybe (Tm Id))
-> type Defs = Map Id (Tm Id)
+> type Defs = Map Id (Ty Id, Maybe (Tm Id))
 >
 > pDef :: Parser Def
 > pDef = post <|> body
@@ -475,6 +475,7 @@ A REPL
 >     | IDef Def
 >     | IQuit
 >     | ISkip
+>     | IEnv
 
 > data Output
 >     = OInfer (Ty Id)
@@ -505,53 +506,59 @@ A REPL
 >                , ("q", return IQuit)
 >                ]
 >
-> input :: String -> TCM Id Input
+> type REPL = TCMT IO Id
+>
+> input :: String -> REPL Input
 > input =
->     either (tyError . ParseError) return .
+>     either (throwError . ParseError) return .
 >     P.parse (P.spaces *> pInput <* P.spaces <* P.eof) ""
 
 > unDef :: Defs -> Tm Id -> Tm Id
-> unDef defs t = do v <- t; fromMaybe (Var v) (Map.lookup v defs)
+> unDef defs t =
+>     do v <- t
+>        fromMaybe (Var v) (join (snd <$> Map.lookup v defs))
 >
-> newDef :: Def -> Defs -> TCM Id Defs
+> newDef :: Def -> Defs -> REPL Defs
 > newDef (Def n ty₀ tm₀) defs =
 >     do ty ∈ Ty
->        defs' <- case tm of
->                     Nothing -> return defs
->                     Just t  -> do t  ∈ ty
->                                   return (Map.insert n (t :∈ ty) defs)
+>        body <- case tm of
+>                    Nothing -> return Nothing
+>                    Just t  -> Just (t :∈ ty) <$ t ∈ ty
 >        modify (insert n ty)
->        return defs'
+>        return (Map.insert n (ty, body) defs)
 >   where
 >     tm = unDef defs <$> tm₀
 >     ty = unDef defs ty₀
 
-> repl :: String -> Defs -> TCM Id (Output, Defs)
+> repl :: String -> Defs -> REPL (Output, Defs)
 > repl inps defs =
 >     do inp <- input inps
 >        case inp of
 >            IInfer (unDef defs -> t) -> (, defs) . OInfer <$> infer t
->            IEval (unDef defs -> t)  -> (, defs) . OEval (nf t) <$> infer t
+>            IEval  (unDef defs -> t) -> (, defs) . OEval (nf t) <$> infer t
 >            IUEval (unDef defs -> t) -> return (OUEval (nf t), defs)
 >            IDef def                 -> (OOK,) <$> newDef def defs
 >            IQuit                    -> return (OQuit, defs)
 >            ISkip                    -> return (OSkip, defs)
 
-> run :: Tys Id -> Defs -> InputT IO ()
-> run tys defs =
+> run :: Defs -> InputT IO ()
+> run defs =
 >     do sm <- getInputLine ">>> "
 >        case sm of
->            Nothing -> run tys defs
+>            Nothing -> run defs
 >            Just s ->
->                case runStateT (repl s defs) tys of
->                    Left err ->
->                        do putDocLn (ppError err)
->                           run tys defs
->                    Right ((OQuit, _), _)   -> return ()
->                    Right ((out, defs'), tys') ->
->                        do putDocLn (ppOutput out)
->                           run tys' defs'
->   where putDocLn = lift . putStrLn . PP.render
+>                do res <- lift (runTCMT (repl s defs) tys)
+>                   case res of
+>                       Left err ->
+>                            do putDocLn (ppError err)
+>                               run defs
+>                       Right ((OQuit, _), _) -> return ()
+>                       Right ((out, defs'), _) ->
+>                           do putDocLn (ppOutput out)
+>                              run defs'
+>   where
+>     putDocLn = lift . putStrLn . PP.render
+>     tys v    = fst <$> Map.lookup v defs
 
 > main :: IO ()
-> main = runInputT defaultSettings (run ε Map.empty)
+> main = runInputT defaultSettings (run Map.empty)
