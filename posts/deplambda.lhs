@@ -143,6 +143,7 @@ Parsing
 >     <|> Snd <$> (lexeme "snd" *> pParens)
 >     <|> pAnn
 >     <|> pApp
+>     <?> "term"
 >
 > pId :: Parser Id
 > pId = P.try (p <* P.spaces) <?> "identifier"
@@ -151,8 +152,7 @@ Parsing
 >
 > pParens :: Parser (Tm Id)
 > pParens =
->     pSingle <|>
->     ((lexeme "(" *> pCompound <* lexeme ")") <?> "parenthesised term")
+>     (pSingle <|> lexeme "(" *> pCompound <* lexeme ")") <?> "parenthesised term"
 >
 > pArr :: Parser (Tm Id)
 > pArr = bi (pArr <|> pApp) <?> "arrow type"
