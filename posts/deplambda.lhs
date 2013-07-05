@@ -1,5 +1,5 @@
 ---
-title: Simply easy
+title: Yet another dependent λ-calculus tutorial.
 date: 2013-07-03
 published: false
 ---
@@ -13,25 +13,24 @@ TODO fixities
 > {-# LANGUAGE OverloadedStrings #-}
 > {-# LANGUAGE TupleSections #-}
 > {-# LANGUAGE TypeSynonymInstances #-}
+> {-# LANGUAGE ViewPatterns #-}
+> {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 > import Control.Arrow (first)
 > import Control.Monad (liftM, ap, unless)
-> import Control.Monad.State
->     (StateT, runStateT, State, evalState, get, gets, put, modify, lift)
-> import Data.Foldable (Foldable, msum)
+> import Control.Monad.State (StateT, runStateT, State, evalState, get, gets, put, modify, lift)
+> import Data.Foldable (Foldable, msum, toList)
 > import Data.Map (Map)
 > import qualified Data.Map as Map
 > import Data.Maybe (fromMaybe)
 > import Data.Traversable (Traversable, traverse)
+> import System.Console.Haskeline (InputT, getInputLine, runInputT, defaultSettings)
+> import System.Console.Haskeline.MonadException ()
 > import Text.Parsec ((<?>), ParseError)
 > import qualified Text.Parsec as P
 > import Text.Parsec.String
-> import Text.PrettyPrint (Doc, (<+>), (<>), ($$), ($+$))
+> import Text.PrettyPrint (Doc, (<+>), (<>), ($$))
 > import qualified Text.PrettyPrint as PP
-> import System.Console.Haskeline
->     (InputT, getInputLine, runInputT, defaultSettings)
-> import System.Console.Haskeline.MonadException ()
-
 
 Term representation
 ----
@@ -146,12 +145,14 @@ Parsing
 >     <|> pApp
 >
 > pId :: Parser Id
-> pId = P.try (((:) <$> P.alphaNum <*> P.many idp) <* P.spaces) <?> "identifier"
+> pId = P.try (p <* P.spaces) <?> "identifier"
 >   where idp = P.alphaNum <|> P.digit <|> P.oneOf "_-'"
+>         p   = (:) <$> P.alphaNum <*> P.many idp
 >
 > pParens :: Parser (Tm Id)
-> pParens = pSingle <|>
->           ((lexeme "(" *> pCompound <* lexeme ")") <?> "parenthesised term")
+> pParens =
+>     pSingle <|>
+>     ((lexeme "(" *> pCompound <* lexeme ")") <?> "parenthesised term")
 >
 > pArr :: Parser (Tm Id)
 > pArr = bi (pArr <|> pApp) <?> "arrow type"
@@ -176,8 +177,9 @@ Parsing
 > pBinder tok f p = simple <|> dep
 >   where
 >     simple = f "_" <$> P.try (pApp <* lexeme tok) <*> p
->     dep = do (v, ty₁) <- P.try (lexeme "[" *> pTyped pId <* lexeme "]" <* lexeme tok)
->              f v ty₁ <$> p
+>     dep = uncurry f <$>
+>           P.try (lexeme "[" *> pTyped pId <* lexeme "]" <* lexeme tok) <*>
+>           p
 >
 > pTyped :: Parser a -> Parser (a, Ty Id)
 > pTyped p = (,) <$> P.try (p <* lexeme ":") <*> pApp
@@ -230,7 +232,8 @@ Pretty printing
 > boundName' s = first (fromMaybe "_") <$> boundName s
 >
 > ppTm :: (Slam v) => Tm v -> Doc
-> ppTm t = evalState (ppTm' (slam t)) Map.empty
+> ppTm t = evalState (ppTm' t') (Map.fromList (zip (toList t') (repeat 1)))
+>   where t' = slam t
 >
 > ppTm' :: Tm Id -> PPM Doc
 > ppTm' Ty             = return "Ty"
@@ -241,12 +244,12 @@ Pretty printing
 > ppTm' (Absurd t)     = fmap ("absurd" <+>) (ppParens t)
 > ppTm' t@(_ :→ _)     = ppArr t
 > ppTm' t@(Lam _)      = ppLam t
-> ppTm' t@(_ :@ _)     = ppApps t
-> ppTm' (fsty :* snty) = ppBinder "->" ppApps fsty snty
-> ppTm' (Pair fs ty)   = middle ", " (ppApps fs) (ppApps ty)
+> ppTm' t@(_ :@ _)     = ppApp t
+> ppTm' (fsty :* snty) = ppBinder "->" ppApp fsty snty
+> ppTm' (Pair fs ty)   = middle ", " (ppApp fs) (ppApp ty)
 > ppTm' (Fst t)        = fmap ("fst" <+>) (ppParens t)
 > ppTm' (Snd t)        = fmap ("snd" <+>) (ppParens t)
-> ppTm' (t :∈ ty)      = ppTyped t ty
+> ppTm' (t :∈ ty)      = middle " : " (ppApp t) (ppApp ty)
 >
 > compound :: Tm v -> Bool
 > compound Ty      = False
@@ -261,17 +264,17 @@ Pretty printing
 >
 > ppArr :: Tm Id -> PPM Doc
 > ppArr (dom :→ cod) = ppBinder "->" ppArr dom cod
-> ppArr t            = ppApps t
+> ppArr t            = ppApp t
 >
 > ppLam :: Tm Id -> PPM Doc
 > ppLam t₀ = fmap ("\\" <>) (go t₀)
 >   where
 >     go (Lam s) = do (arg, t) <- boundName' s; fmap (PP.text arg <+>) (go t)
->     go t       = fmap ("=>" <+>) (ppApps t)
+>     go t       = fmap ("=>" <+>) (ppApp t)
 >
-> ppApps :: Tm Id -> PPM Doc
-> ppApps (t₁ :@ t₂) = (<+>) <$> ppApps t₁ <*> ppParens t₂
-> ppApps t          = ppParens t
+> ppApp :: Tm Id -> PPM Doc
+> ppApp (t₁ :@ t₂) = (<+>) <$> ppApp t₁ <*> ppParens t₂
+> ppApp t          = ppParens t
 >
 > middle :: String -> PPM Doc -> PPM Doc -> PPM Doc
 > middle s x₁ x₂ =
@@ -281,17 +284,13 @@ Pretty printing
 >
 > ppBinder :: String -> (Tm Id -> PPM Doc) -> Tm Id -> Scope Tm Id -> PPM Doc
 > ppBinder tok pp ty₁ ty₂ =
->     do ty₁doc      <- ppApps ty₁
+>     do ty₁doc      <- ppApp ty₁
 >        (arg, ty₂') <- boundName ty₂
 >        ty₂doc      <- pp ty₂'
 >        return (case arg of
 >                    Nothing -> ty₁doc
 >                    Just n  -> "[" <> PP.text n <+> ":" <+> ty₁doc <> "]"
 >                <+> PP.text tok <+> ty₂doc)
->
-> ppTyped :: Tm Id -> Ty Id -> PPM Doc
-> ppTyped t₁ t₂ = middle " : " (ppApps t₁) (ppApps t₂)
-
 
 Reduction
 ----
@@ -305,7 +304,9 @@ Reduction
 > nf (Absurd t)     = Absurd (nf t)
 > nf (dom :→ cod)   = nf dom :→ nf cod
 > nf (Lam s)        = Lam (nf s)
-> nf (t₁ :@ t₂)     = nf t₁ :@ nf t₂
+> nf (t₁ :@ t₂)     = case nf t₁ of
+>                         Lam s -> nf (s @@ t₂)
+>                         t₁'   -> t₁' :@ nf t₂
 > nf (tyfs :* tysn) = nf tyfs :* nf tysn
 > nf (Pair fs sn)   = Pair (nf fs) (nf sn)
 > nf (Fst t)        = case nf t of
@@ -314,7 +315,7 @@ Reduction
 > nf (Snd t)        = case nf t of
 >                         Pair _ sn -> sn
 >                         t'        -> t'
-> nf (t :∈ ty)      = nf t :∈ nf ty
+> nf (t :∈ _)       = nf t
 
 Contexts
 ----
@@ -363,7 +364,8 @@ Type checking
 > nest4 = PP.nest 4
 >
 > ppError :: TyError -> Doc
-> ppError (OutOfBounds n) = "Out of bound variable" <+> ppQuote (PP.text n)
+> ppError (OutOfBounds n) =
+>     "Out of bound variable `" <> ppQuote (PP.text n) <> "'"
 > ppError (ExpectingFun t ty) =
 >     "Expecting function type for term:" $$ nest4 (ppTm t) $$
 >     "instead of:" $$ nest4 (ppTm ty)
@@ -462,13 +464,14 @@ A REPL
 >     body =
 >         do lexeme "let"
 >            (v, ty) <- pTyped pId
->            lexeme "=>"
+>            lexeme ":="
 >            t <- pTm
 >            return (Def v ty (Just t))
 
 > data Input
 >     = IInfer (Tm Id)
 >     | IEval (Tm Id)
+>     | IUEval (Tm Id)
 >     | IDef Def
 >     | IQuit
 >     | ISkip
@@ -476,13 +479,15 @@ A REPL
 > data Output
 >     = OInfer (Ty Id)
 >     | OEval (Tm Id) (Ty Id)
+>     | OUEval (Tm Id)
 >     | OQuit
 >     | OOK
 >     | OSkip
 >
 > ppOutput :: Output -> Doc
 > ppOutput (OInfer ty)  = "Type:" $$ nest4 (ppTm ty)
-> ppOutput (OEval t ty) = ppOutput (OInfer ty) $+$ ppTm t
+> ppOutput (OEval t ty) = ppOutput (OInfer ty) $$ ppTm t
+> ppOutput (OUEval t)   = ppTm t
 > ppOutput OQuit        = ""
 > ppOutput OOK          = "OK"
 > ppOutput OSkip        = ""
@@ -495,35 +500,42 @@ A REPL
 >     <|> return ISkip
 >   where
 >     command  = P.char ':' *> msum [lexeme ch *> p | (ch, p) <- commands]
->     commands = [("t", IInfer <$> pTm), ("q", return IQuit)]
+>     commands = [ ("t", IInfer <$> pTm)
+>                , ("u", IUEval <$> pTm)
+>                , ("q", return IQuit)
+>                ]
 >
 > input :: String -> TCM Id Input
 > input =
 >     either (tyError . ParseError) return .
 >     P.parse (P.spaces *> pInput <* P.spaces <* P.eof) ""
 
+> unf :: Defs -> Tm Id -> Tm Id
+> unf defs t = do v <- t; fromMaybe (Var v) (Map.lookup v defs)
+>
 > newDef :: Def -> Defs -> TCM Id Defs
 > newDef (Def n ty₀ tm₀) defs =
 >     do ty ∈ Ty
 >        defs' <- case tm of
 >                     Nothing -> return defs
->                     Just t  -> do t  ∈ ty; return (Map.insert n t defs)
+>                     Just t  -> do t  ∈ ty
+>                                   return (Map.insert n (t :∈ ty) defs)
 >        modify (insert n ty)
 >        return defs'
 >   where
->     untop t' = do v <- t'; fromMaybe (Var v) (Map.lookup v defs)
->     tm = untop <$> tm₀
->     ty = untop ty₀
+>     tm = unf defs <$> tm₀
+>     ty = unf defs ty₀
 
 > repl :: String -> Defs -> TCM Id (Output, Defs)
 > repl inps defs =
 >     do inp <- input inps
 >        case inp of
->            IInfer t -> (, defs) . OInfer <$> infer t
->            IEval t  -> (, defs) . OEval (nf t) <$> infer t
->            IDef def -> (OOK,) <$> newDef def defs
->            IQuit    -> return (OQuit, defs)
->            ISkip    -> return (OSkip, defs)
+>            IInfer (unf defs -> t) -> (, defs) . OInfer <$> infer t
+>            IEval (unf defs -> t)  -> (, defs) . OEval (nf t) <$> infer t
+>            IUEval (unf defs -> t) -> return (OUEval (nf t), defs)
+>            IDef def               -> (OOK,) <$> newDef def defs
+>            IQuit                  -> return (OQuit, defs)
+>            ISkip                  -> return (OSkip, defs)
 
 > run :: Tys Id -> Defs -> InputT IO ()
 > run tys defs =
