@@ -30,8 +30,8 @@ body {
 }
 
 pre, code, samp {
-    font-family: Inconsolata, Consolas, monospace;
-    font-size: 1em;
+    font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;
+    font-size: 0.9em;
     font-weight: normal;
 }
 
