@@ -37,8 +37,7 @@ Term representation
 ----
 
 > type Id = String
-> newtype Name = Name Id
->     deriving (Show)
+> newtype Name = Name Id deriving (Show)
 > instance Eq  Name where _ == _ = True
 > instance Ord Name where compare _ _ = EQ
 
@@ -151,7 +150,8 @@ Parsing
 >   where idp = P.alphaNum <|> P.digit <|> P.oneOf "_-'"
 >
 > pParens :: Parser (Tm Id)
-> pParens = pSingle <|> (lexeme "(" *> pCompound <* lexeme ")")
+> pParens = pSingle <|>
+>           ((lexeme "(" *> pCompound <* lexeme ")") <?> "parenthesised term")
 >
 > pArr :: Parser (Tm Id)
 > pArr = bi (pArr <|> pApp) <?> "arrow type"
