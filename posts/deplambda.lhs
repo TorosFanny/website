@@ -15,7 +15,7 @@ TODO fixities
 > {-# LANGUAGE TypeSynonymInstances #-}
 > import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 > import Control.Arrow (first)
-> import Control.Monad (liftM, ap, unless, void)
+> import Control.Monad (liftM, ap, unless)
 > import Control.Monad.State
 >     (StateT, runStateT, State, evalState, get, gets, put, modify, lift)
 > import Data.Foldable (Foldable, msum)
@@ -120,69 +120,67 @@ Term representation
 Parsing
 ----
 
-> infixl 3 <||>
-> (<||>) :: Parser a -> Parser a -> Parser a
-> p₁ <||> p₂ = P.try p₁ <|> p₂
->
-> lexeme :: String -> Parser ()
-> lexeme s = void (P.string s <* P.spaces)
+> lexeme :: String -> Parser String
+> lexeme s = P.try (P.string s) <* P.spaces
 
 > pTm :: Parser (Tm Id)
-> pTm = pCompound
+> pTm = P.spaces *> pCompound
 >
 > pSingle :: Parser (Tm Id)
 > pSingle =
->          Ty    <$  lexeme "Ty"
->     <||> Var   <$> pId
->     <||> Unit  <$  lexeme "Unit"
->     <||> Tt    <$  lexeme "tt"
->     <||> Empty <$  lexeme "Empty"
->     <?>  "single term"
+>         Ty    <$  lexeme "Ty"
+>     <|> Unit  <$  lexeme "Unit"
+>     <|> Tt    <$  lexeme "tt"
+>     <|> Empty <$  lexeme "Empty"
+>     <|> Var   <$> pId
 >
 > pCompound :: Parser (Tm Id)
 > pCompound =
->          Absurd <$> (lexeme "absurd" *> pParens)
->     <||> pArr
->     <||> pLam
->     <||> pBinder "*" prod pApp
->     <||> Pair <$> pParens <*> (lexeme "," *> pParens)
->     <||> Fst <$> (lexeme "fst" *> pParens)
->     <||> Snd <$> (lexeme "snd" *> pParens)
->     <||> uncurry (:∈) <$> pTyped pApp
->     <||> pApp
->     <?>  "compound term"
+>         Absurd <$> (lexeme "absurd" *> pParens)
+>     <|> pArr
+>     <|> pLam
+>     <|> pBinder "*" prod pApp
+>     <|> pPair
+>     <|> Fst <$> (lexeme "fst" *> pParens)
+>     <|> Snd <$> (lexeme "snd" *> pParens)
+>     <|> pAnn
+>     <|> pApp
 >
 > pId :: Parser Id
-> pId = (((:) <$> P.alphaNum <*> P.many idp) <* P.spaces) <?> "identifier"
->   where idp = P.alphaNum <||> P.digit <||> P.oneOf "_-'"
+> pId = P.try (((:) <$> P.alphaNum <*> P.many idp) <* P.spaces) <?> "identifier"
+>   where idp = P.alphaNum <|> P.digit <|> P.oneOf "_-'"
 >
 > pParens :: Parser (Tm Id)
-> pParens = pSingle <||> (lexeme "(" *> pCompound <* lexeme ")")
+> pParens = pSingle <|> (lexeme "(" *> pCompound <* lexeme ")")
 >
 > pArr :: Parser (Tm Id)
-> pArr = bi (bi pApp <||> pApp) where bi = pBinder "->" arr
+> pArr = bi (pArr <|> pApp) <?> "arrow type"
+>   where bi = pBinder "->" arr
 >
 > pLam :: Parser (Tm Id)
-> pLam = P.string "\\" *> go
->   where go = lexeme "=>" *> pApp <||>
->              lam <$> (P.string "_" <||> pId) <*> go
+> pLam = (lexeme "\\" *> go) <?> "abstraction"
+>   where go = lexeme "=>" *> pApp <|>
+>              lam <$> (lexeme "_" <|> pId) <*> go
 >
 > pApp :: Parser (Tm Id)
 > pApp = foldl1 (:@) <$> P.many1 pParens
 >
+> pPair :: Parser (Tm Id)
+> pPair = (Pair <$> P.try (pParens <* lexeme ",") <*> pParens) <?> "pair"
+>
+> pAnn :: Parser (Tm Id)
+> pAnn = (uncurry (:∈) <$> pTyped pApp) <?> "annotated term"
+>
 > pBinder :: String -> (Id -> Ty Id -> Ty Id -> Ty Id) -> Parser (Ty Id)
 >         -> Parser (Ty Id)
-> pBinder tok f p = dep <||> simple
+> pBinder tok f p = simple <|> dep
 >   where
->     dep = do lexeme "["
->              (v, ty₁) <- pTyped pId
->              lexeme "]"
->              lexeme tok
+>     simple = f "_" <$> P.try (pApp <* lexeme tok) <*> p
+>     dep = do (v, ty₁) <- P.try (lexeme "[" *> pTyped pId <* lexeme "]" <* lexeme tok)
 >              f v ty₁ <$> p
->     simple = f "_" <$> pApp <*> (lexeme tok *> pApp)
 >
 > pTyped :: Parser a -> Parser (a, Ty Id)
-> pTyped p = (,) <$> p <*> (lexeme ":" *> pApp)
+> pTyped p = (,) <$> P.try (p <* lexeme ":") <*> pApp
 
 Pretty printing
 ----
@@ -455,7 +453,7 @@ A REPL
 > type Defs = Map Id (Tm Id)
 >
 > pDef :: Parser Def
-> pDef = post <||> body
+> pDef = post <|> body
 >   where
 >     post =
 >         do lexeme "postulate"
@@ -491,13 +489,13 @@ A REPL
 
 > pInput :: Parser Input
 > pInput =
->          (command <?> "command")
->     <||> ((IDef <$> pDef) <?> "definition")
->     <||> IEval <$> pTm
->     <||> return ISkip
+>         (command <?> "command")
+>     <|> ((IDef <$> pDef) <?> "definition")
+>     <|> IEval <$> pTm
+>     <|> return ISkip
 >   where
->     command  = P.char ':' *> msum [P.char ch *> p | (ch, p) <- commands]
->     commands = [('t', IInfer <$> pTm), ('q', return IQuit)]
+>     command  = P.char ':' *> msum [lexeme ch *> p | (ch, p) <- commands]
+>     commands = [("t", IInfer <$> pTm), ("q", return IQuit)]
 >
 > input :: String -> TCM Id Input
 > input =
