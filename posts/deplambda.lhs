@@ -510,8 +510,8 @@ A REPL
 >     either (tyError . ParseError) return .
 >     P.parse (P.spaces *> pInput <* P.spaces <* P.eof) ""
 
-> unf :: Defs -> Tm Id -> Tm Id
-> unf defs t = do v <- t; fromMaybe (Var v) (Map.lookup v defs)
+> unDef :: Defs -> Tm Id -> Tm Id
+> unDef defs t = do v <- t; fromMaybe (Var v) (Map.lookup v defs)
 >
 > newDef :: Def -> Defs -> TCM Id Defs
 > newDef (Def n ty₀ tm₀) defs =
@@ -523,19 +523,19 @@ A REPL
 >        modify (insert n ty)
 >        return defs'
 >   where
->     tm = unf defs <$> tm₀
->     ty = unf defs ty₀
+>     tm = unDef defs <$> tm₀
+>     ty = unDef defs ty₀
 
 > repl :: String -> Defs -> TCM Id (Output, Defs)
 > repl inps defs =
 >     do inp <- input inps
 >        case inp of
->            IInfer (unf defs -> t) -> (, defs) . OInfer <$> infer t
->            IEval (unf defs -> t)  -> (, defs) . OEval (nf t) <$> infer t
->            IUEval (unf defs -> t) -> return (OUEval (nf t), defs)
->            IDef def               -> (OOK,) <$> newDef def defs
->            IQuit                  -> return (OQuit, defs)
->            ISkip                  -> return (OSkip, defs)
+>            IInfer (unDef defs -> t) -> (, defs) . OInfer <$> infer t
+>            IEval (unDef defs -> t)  -> (, defs) . OEval (nf t) <$> infer t
+>            IUEval (unDef defs -> t) -> return (OUEval (nf t), defs)
+>            IDef def                 -> (OOK,) <$> newDef def defs
+>            IQuit                    -> return (OQuit, defs)
+>            ISkip                    -> return (OSkip, defs)
 
 > run :: Tys Id -> Defs -> InputT IO ()
 > run tys defs =
