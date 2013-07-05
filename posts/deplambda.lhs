@@ -353,6 +353,7 @@ Type checking
 >     | Mismatch (Ty Id) (Tm Id) (Ty Id)
 >     | NotAnnotated (Tm Id)
 >     | ParseError ParseError
+>     | Duplicate Id
 >
 > instance Error TyError where
 >     noMsg = undefined
@@ -368,6 +369,8 @@ Type checking
 > ppError :: TyError -> Doc
 > ppError (OutOfBounds n) =
 >     "Out of bound variable `" <> PP.text n <> "'"
+> ppError (Duplicate n) =
+>     "Trying to postulate already postulated `" <> PP.text n <> "'"
 > ppError (ExpectingFun t ty) =
 >     "Expecting function type for term:" $$ nest4 (ppTm t) $$
 >     "instead of:" $$ nest4 (ppTm ty)
@@ -452,7 +455,7 @@ A REPL
 ----
 
 > data Def = Def Id (Ty Id) (Maybe (Tm Id))
-> type Defs = Map Id (Ty Id, Maybe (Tm Id))
+> type Defs = [(Id, (Ty Id, Maybe (Tm Id)))]
 >
 > pDef :: Parser Def
 > pDef = post <|> body
@@ -475,7 +478,7 @@ A REPL
 >     | IDef Def
 >     | IQuit
 >     | ISkip
->     | IEnv
+>     | IDefs
 
 > data Output
 >     = OInfer (Ty Id)
@@ -504,6 +507,7 @@ A REPL
 >     commands = [ ("t", IInfer <$> pTm)
 >                , ("u", IUEval <$> pTm)
 >                , ("q", return IQuit)
+>                , ("defs", return IDefs)
 >                ]
 >
 > type REPL = TCMT IO Id
@@ -516,16 +520,18 @@ A REPL
 > unDef :: Defs -> Tm Id -> Tm Id
 > unDef defs t =
 >     do v <- t
->        fromMaybe (Var v) (join (snd <$> Map.lookup v defs))
+>        fromMaybe (Var v) (join (snd <$> lookup v defs))
 >
 > newDef :: Def -> Defs -> REPL Defs
 > newDef (Def n ty₀ tm₀) defs =
 >     do ty ∈ Ty
 >        body <- case tm of
+>                    Nothing | Just _ <- lookup n defs ->
+>                        throwError (Duplicate n)
 >                    Nothing -> return Nothing
 >                    Just t  -> Just (t :∈ ty) <$ t ∈ ty
 >        modify (insert n ty)
->        return (Map.insert n (ty, body) defs)
+>        return ((n, (ty, body)) : defs)
 >   where
 >     tm = unDef defs <$> tm₀
 >     ty = unDef defs ty₀
@@ -558,7 +564,7 @@ A REPL
 >                              run defs'
 >   where
 >     putDocLn = lift . putStrLn . PP.render
->     tys v    = fst <$> Map.lookup v defs
+>     tys v    = fst <$> lookup v defs
 
 > main :: IO ()
-> main = runInputT defaultSettings (run Map.empty)
+> main = runInputT defaultSettings (run [])
