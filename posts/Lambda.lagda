@@ -1,15 +1,16 @@
-In the [previous Agda example](/posts/AgdaSort.html) we saw how we can approach
-the task of verifying a sorting function.  This time, we are going to write a
-type checker for the simply typed λ-calculus, plus a simple optimization on said
-terms that we will prove correct.  As in the other post the bulk of the thinking
-has been done by other people: I took most of the post from Ulf Norell's [Agda
-tutorial](http://www.cse.chalmers.se/~ulfn/papers/afp08/tutorial.pdf)[^depcalc],
-and the term transformation example from Adam Chlipala's Coq book ['Certified
-Programming with Dependent Types'](http://adam.chlipala.net/cpdt/).  They are
-both great, go read them if you have time!
+In the [previous Agda example](/posts/AgdaSort.html) we saw how we can
+approach the task of verifying a sorting function.  This time, we are
+going to write a type checker for the simply typed λ-calculus, plus a
+simple optimization on said terms that we will prove correct.  As in the
+other post the bulk of the thinking has been done by other people.  The
+type checking is a modified version of an example by Conor
+McBride,[^tvftl] while the optimisation is taken from a talk given by
+Adam Chlipala at POPL 2013---his Coq book [*Certified Programming with
+Dependent Types*](http://adam.chlipala.net/cpdt/) contains many similar
+examples.
 
-[^depcalc]: Who in turn took it from 'The View from the Left', by Conor McBride
-and James McKinna.
+[^tvftl]: See *The View from the Left*, and also the Agda version by Ulf
+Norell in his *Programming in Agda* tutorial.
 
 Let's get started.
 
@@ -18,117 +19,38 @@ Let's get started.
 \begin{code}
 module Lambda where
 
-open import Data.Nat using (ℕ; zero; suc; _+_)
+open import Data.Nat using (ℕ; zero; suc; _+_; _≤?_)
+open import Data.Fin using (Fin; zero; suc; toℕ; fromℕ≤)
 open import Data.List using (List; []; _∷_; length)
+open import Data.Vec using (Vec; []; _∷_; lookup)
+open import Relation.Binary.Core using (Decidable)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; cong₂)
-open import Function hiding (_$_; const)
+open import Relation.Nullary
+open import Function
 \end{code}
 
 After the module declaration, we include some useful modules from the [Agda
 standard
 library](http://wiki.portal.chalmers.se/agda/pmwiki.php?n=Libraries.StandardLibrary):
 
-* `Data.Nat` defines natural numbers, we only import the type (`ℕ`) and
-  constructors (`zero` and `suc`), and the addition operator.
-* `Data.List` defines finite lists, again we import type and constructors, plus
-  `length`.
+* `Data.Nat` defines natural numbers.
+
+* `Data.Fin` defines an inductive families to represent the type of all
+  numbers less than a given number.  For instance `Fin 3` will be
+  inhabited by `0`, `1`, and `2`.
+
+* `Data.List`, predictably, defines finite lists.
+
+* `Data.Vec` defines lists indexed by their length.  This allows, for
+  example, for safe indexing of elements.
+
 * `Relation.Binary.PropositionalEquality` defines propositional equality as
   [presented](/posts/AgdaSort.html#propositional-equality) in the previous post.
   `cong₂` is the two-argument version of `cong`.
-* `Function` exports some common utilities that should be familiar to the
-  Haskell programmer.  We hide two of them because they would conflict with the
-  names we will be defining.
 
-Since some people complained about Agda material defining everything from zero,
-I want to point out that a lot of the accessories that we will define are
-present in the standard library.  However they are usually defined in a much
-more general way, which can be confusing for beginners.  Moreover part of this
-tutorial is to showcase those structures in the first place.
-
-## Indexing things
-
-Referring to elements in lists is quite painful in Haskell and in programming at
-large.  We would often like a way to store 'references' to elements that are
-known to be in the list, or guarantee in other ways that what we are looking up
-is indeed present.
-
-In Agda this can be easily achieved using an inductive family:
-
-\begin{code}
-data _∈_ {A : Set} (x : A) : List A → Set where
-  here  : ∀ {l}           → x ∈ (x ∷ l)
-  there : ∀ {l y} → x ∈ l → x ∈ (y ∷ l)
-\end{code}
-
-The `here` constructor creates evidence that the element we are indexing is at
-the head of the list.  Otherwise, if we know that `x` is already in `xs`, we can
-construct evidence that `x` will also be in `y ∷ xs` for any `y`, with the
-`there` constructor.  Note that there is no case where the `List` index of `∈`
-is an empty list, which makes sense given the fact that empty lists contain no
-elements.
-
-We can recover a numeric index from our fancy `∈`:
-
-\begin{code}
-index : ∀ {A} {x : A} {xs} → x ∈ xs → ℕ
-index here      = zero
-index (there p) = suc (index p)
-\end{code}
-
-We also want to define a `lookup` function that tries to get then `n`th element
-of a list, if `n` is less then the list length, and fails otherwise recording
-how 'off' we were.  First we define a family representing what kind of thing
-this function will return:
-
-\begin{code}
-data Lookup {A : Set} (xs : List A) : ℕ → Set where
-  inside  : (x : A) (p : x ∈ xs) → Lookup xs (index p)
-  outside : (m : ℕ) → Lookup xs (length xs + m)
-\end{code}
-
-If the `n` is within bounds, then we will return the corresponding element (`x`)
-and evidence that it is in the list (`p`), while stating that `n = index p`.  If
-the `n` is out of bounds, we return an `m` such that `length xs + m = n`.
-
-\begin{code}
-lookup : {A : Set} (xs : List A) (n : ℕ) → Lookup xs n
-\end{code}
-
-The cases when the list is empty is straight forward---every index will be to
-big for an empty list, and the offset is the number itself: `length [] + n = n`.
-
-\begin{code}
-lookup []       n    = outside n
-\end{code}
-
-If the index is `zero` and the list is not empty, we are in luck: the element we
-are looking for is at the head of the list, and we can return evidence using
-`here`.
-
-\begin{code}
-lookup (x ∷ xs) zero = inside x here
-\end{code}
-
-Otherwise, the recursive case: we keep looking up in the tail of the list,
-taking the predecessor of the number as new index.  If we do find something,
-then we return evidence using `there`.  If we didn't, we propagate the failure.
-
-\begin{code}
-lookup (x ∷ xs) (suc n) with lookup xs n
-lookup (x ∷ xs) (suc .(index p))       | inside y p = inside y (there p)
-lookup (x ∷ xs) (suc .(length xs + m)) | outside m  = outside m
-\end{code}
-
-Something interesting is happening here: when using `with` and pattern matching
-on an inhabitant of an inductive family, we gain information on the indices of
-said family.  Given the definition of `Lookup`, when matching `inside` we know
-that `n` must be the index of the returned evidence.  With `outside`, we know
-that `n` must be the length of the list plus an offset.  This new knowledge can
-be exploited using 'dotted patterns', which express the fact that a certain term
-on the left hand side of a definition *must* be of a certain shape, given the
-information gained thanks to pattern matching elsewhere.  Even if in this case
-this doesn't seem that useful, it is a very convenient device, as we will see
-shortly.
+* `Function` exports some common utilities regarding functions that
+  should be familiar to the Haskell programmer, such as function
+  composition.
 
 ## Simple types and raw terms
 
@@ -138,67 +60,82 @@ data Type : Set where
   nat : Type
   _⇒_ : Type → Type → Type
 
-data Equal? : Type → Type → Set where
-  yes : ∀ {τ}   → Equal? τ τ
-  no  : ∀ {σ τ} → Equal? σ τ
+≡⇒₁ : ∀ {σ σ′ τ τ′} → σ ⇒ τ ≡ σ′ ⇒ τ′ → σ ≡ σ′
+≡⇒₁ refl = refl
 
-_≟_ : (σ τ : Type) → Equal? σ τ
-nat   ≟ nat   = yes
-nat   ≟ _ ⇒ _ = no
-_ ⇒ _ ≟ nat   = no
+≡⇒₂ : ∀ {σ σ′ τ τ′} → σ ⇒ τ ≡ σ′ ⇒ τ′ → τ ≡ τ′
+≡⇒₂ refl = refl
+
+_≟_ : Decidable {A = Type} _≡_
+nat   ≟ nat   = yes refl
+nat   ≟ _ ⇒ _ = no λ()
+_ ⇒ _ ≟ nat   = no λ()
 σ ⇒ τ ≟ σ′ ⇒ τ′ with σ ≟ σ′ | τ ≟ τ′
-σ ⇒ τ ≟ .σ ⇒ .τ | yes | yes = yes
-_ ⇒ _ ≟ _  ⇒ _  | _   | _   = no
+σ ⇒ τ ≟ .σ ⇒ .τ | yes refl | yes refl = yes refl
+σ ⇒ τ ≟ .σ ⇒ τ′ | yes refl | no τ≢τ′  = no (τ≢τ′ ∘ ≡⇒₂)
+σ ⇒ τ ≟ σ′ ⇒ τ′ | no  σ≢σ′ | _        = no (σ≢σ′ ∘ ≡⇒₁)
 
-infixl 80 _$_
+infixl 80 _·_
 data Raw : Set where
-  var   : ℕ → Raw
-  const : ℕ → Raw
-  _⊕_   : Raw → Raw → Raw
-  _$_   : Raw → Raw → Raw
-  lam   : Type → Raw → Raw
+  var : ℕ → Raw
+  lit : ℕ → Raw
+  _⊕_ : Raw → Raw → Raw
+  _·_ : Raw → Raw → Raw
+  lam : Type → Raw → Raw
 \end{code}
 
 ## Typed terms, and type inference
 
 \begin{code}
-Ctx = List Type
+Ctx = Vec Type
 
-data Term (Γ : Ctx) : Type → Set where
-  var   : ∀ {τ} → τ ∈ Γ → Term Γ τ
-  const : ℕ → Term Γ nat
-  _⊕_   : Term Γ nat → Term Γ nat → Term Γ nat
-  _$_   : ∀ {σ τ} → Term Γ (σ ⇒ τ) → Term Γ σ → Term Γ τ
-  lam   : ∀ σ {τ} → Term (σ ∷ Γ) τ → Term Γ (σ ⇒ τ)
+data Term {n} (Γ : Ctx n) : Type → Set where
+  var : ∀ {τ} (v : Fin n) → τ ≡ lookup v Γ → Term Γ τ
+  lit : ℕ → Term Γ nat
+  _⊕_ : Term Γ nat → Term Γ nat → Term Γ nat
+  _·_ : ∀ {σ τ} → Term Γ (σ ⇒ τ) → Term Γ σ → Term Γ τ
+  lam : ∀ σ {τ} → Term (σ ∷ Γ) τ → Term Γ (σ ⇒ τ)
 
-erase : ∀ {Γ τ} → Term Γ τ → Raw
-erase (var x) = var (index x)
-erase (const n) = const n
+erase : ∀ {n} {Γ : Ctx n} {τ} → Term Γ τ → Raw
+erase (var v _) = var (toℕ v)
+erase (lit n) = lit n
 erase (t ⊕ u) = erase t ⊕ erase u
-erase (t $ u) = erase t $ erase u
+erase (t · u) = erase t · erase u
 erase (lam σ t) = lam σ (erase t)
 
-data Infer (Γ : Ctx) : Raw → Set where
+data Fromℕ (n : ℕ) : ℕ → Set where
+  yes : (m : Fin n) → Fromℕ n (toℕ m)
+  no  : (m : ℕ)     → Fromℕ n (n + m)
+
+fromℕ : (n m : ℕ) → Fromℕ n m
+fromℕ zero  m = no m
+fromℕ (suc n) zero = yes zero
+fromℕ (suc n) (suc m) with fromℕ n m
+fromℕ (suc n) (suc .(toℕ m)) | yes m = yes (suc m)
+fromℕ (suc n) (suc .(n + m)) | no  m = no m
+
+data Infer {n} (Γ : Ctx n) : Raw → Set where
   ok  : (τ : Type) (t : Term Γ τ) → Infer Γ (erase t)
   bad : {e : Raw} → Infer Γ e
 
-infer : (Γ : Ctx) (e : Raw) → Infer Γ e
-infer Γ (var n) with            lookup Γ n
-infer Γ (var .(length Γ + n)) | outside n  = bad
-infer Γ (var .(index x))      | inside σ x = ok σ (var x)
-infer Γ (const n) = ok nat (const n)
-infer Γ (t ⊕ u) with                infer Γ t | infer Γ u
+infer : ∀ {n} (Γ : Ctx n) (e : Raw) → Infer Γ e
+infer {n} Γ (var v) with fromℕ n v
+infer {n} Γ (var .(toℕ v)) | yes v = ok (lookup v Γ) (var v refl)
+infer {n} Γ (var .(n + m)) | no  m = bad
+infer Γ (lit n) = ok nat (lit n)
+infer Γ (t ⊕ u) with infer Γ t | infer Γ u
 infer Γ (.(erase t) ⊕ .(erase u)) | ok nat t  | ok nat u = ok nat (t ⊕ u)
 infer Γ (_ ⊕ _)                   | _         | _        = bad
-infer Γ (t $ u) with                infer Γ t    | infer Γ u
-infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok σ′ u with σ ≟ σ′
-infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok .σ u | yes = ok τ (t $ u)
-infer Γ (.(erase t) $ .(erase u)) | ok (σ ⇒ τ) t | ok σ′ u | no  = bad
-infer Γ (.(erase t) $ u)          | ok _ t       | _       = bad
-infer Γ (_ $ _)                   | bad          | _       = bad
-infer Γ (lam σ e) with       infer (σ ∷ Γ) e
+infer Γ (t · u) with infer Γ t | infer Γ u
+infer Γ (.(erase t) · .(erase u)) | ok (σ ⇒ τ) t | ok σ′ u with σ ≟ σ′
+infer Γ (.(erase t) · .(erase u)) | ok (σ ⇒ τ) t | ok .σ u | yes refl = ok τ (t · u)
+infer Γ (.(erase t) · .(erase u)) | ok (σ ⇒ τ) t | ok σ′ u | no  _    = bad
+infer Γ (.(erase t) · u)          | ok _ t       | _       = bad
+infer Γ (_ · _)                   | bad          | _       = bad
+infer Γ (lam σ e) with infer (σ ∷ Γ) e
 infer Γ (lam σ .(erase t)) | ok τ t = ok (σ ⇒ τ) (lam σ t)
 infer Γ (lam σ e)          | bad    = bad
+
 \end{code}
 
 ## Embedding terms
@@ -208,21 +145,21 @@ infer Γ (lam σ e)          | bad    = bad
 ⟦ nat   ⟧ = ℕ
 ⟦ σ ⇒ τ ⟧ = ⟦ σ ⟧ → ⟦ τ ⟧
 
-infixr 5 _◁_
-data Env : List Type → Set where
-  ε   : Env []
-  _◁_ : ∀ {τ τs} → ⟦ τ ⟧ → Env τs → Env (τ ∷ τs)
+infixr 5 _∷_
+data Env : ∀ {n} → Ctx n → Set where
+  []  : Env []
+  _∷_ : ∀ {n} {Γ : Ctx n} {τ} → ⟦ τ ⟧ → Env Γ → Env (τ ∷ Γ)
 
-_!_ : ∀ {τ τs} → τ ∈ τs → Env τs → ⟦ τ ⟧
-here       ! (x ◁ _) = x
-there x∈xs ! (_ ◁ l) = x∈xs ! l
+lookupEnv : ∀ {n} {Γ : Ctx n} → (m : Fin n) → Env Γ → ⟦ lookup m Γ ⟧
+lookupEnv zero    (x ∷ _)   = x
+lookupEnv (suc n) (_ ∷ env) = lookupEnv n env
 
-_[_] : ∀ {Γ τ} → Env Γ → Term Γ τ → ⟦ τ ⟧
-env [ var x   ] = x ! env
-env [ const n ] = n
-env [ t ⊕ u   ] = env [ t ] + env [ u ]
-env [ t $ u   ] = (env [ t ]) (env [ u ])
-env [ lam _ t ] = λ x → (x ◁ env) [ t ]
+_[_] : ∀ {n} {Γ : Ctx n} {τ} → Env Γ → Term Γ τ → ⟦ τ ⟧
+env [ var v refl ] = lookupEnv v env
+env [ lit n      ] = n
+env [ t ⊕ u      ] = env [ t ] + env [ u ]
+env [ t · u      ] = (env [ t ]) (env [ u ])
+env [ lam _ t    ] = λ x → (x ∷ env) [ t ]
 \end{code}
 
 ## Constant folding
@@ -234,26 +171,23 @@ env [ lam _ t ] = λ x → (x ◁ env) [ t ]
 -- much quicker due to how pattern matching works in Agda.
 
 -- yeee
-postulate ext : ∀ {A B : Set} {f g : A → B} → ((x : A) → f x ≡ g x) → f ≡ g
+postulate ext : ∀ {A B : Set} {f g : A → B} → ({x : A} → f x ≡ g x) → f ≡ g
 
-record Transformation {Γ σ} (t : Term Γ σ) : Set where
-  constructor trans
+record Optimised {n} {Γ : Ctx n} {σ} (t : Term Γ σ) : Set where
+  constructor opt
   field
-    result    : Term Γ σ
-    preserves : ∀ {c} → c [ t ] ≡ c [ result ]
-open Transformation
+    optimised : Term Γ σ
+    preserves : ∀ {env} → env [ t ] ≡ env [ optimised ]
 
-cfold′ : ∀ {Γ σ} → (t : Term Γ σ) → Transformation t
-cfold′ (var v) = trans (var v) refl
-cfold′ (const n) = trans (const n) refl
-cfold′ (t $ u) with cfold′ t | cfold′ u
-... | trans t′ p | trans u′ q = trans (t′ $ u′) (cong₂ (λ x y → x y) p q)
-cfold′ (lam σ t) with cfold′ t
-... | trans t′ p = trans (lam σ t′) (ext (λ x → p))
-cfold′ (t ⊕ u) with cfold′ t | cfold′ u
-... | trans (const n) p | trans (const m) q = trans (const (n + m)) (cong₂ _+_ p q)
-... | trans t′        p | trans u′        q = trans (t′ ⊕ u′)       (cong₂ _+_ p q)
+cfold : ∀ {n} {Γ : Ctx n} {τ} (t : Term Γ τ) → Optimised t
+cfold (var v p) = opt (var v p) refl
+cfold (t · u) with cfold t | cfold u
+... | opt t′ p | opt u′ q = opt (t′ · u′) (cong₂ (λ t u → t u) p q)
+cfold (lam σ t) with cfold t
+... | opt t′ p = opt (lam σ t′) (ext p)
+cfold (t ⊕ u) with cfold t | cfold u
+cfold (t ⊕ u) | opt (lit n) p | opt (lit m) q = opt (lit (n + m)) (cong₂ _+_ p q)
+cfold (t ⊕ u) | opt t′ p | opt u′ q = opt (t′ ⊕ u′) (cong₂ _+_ p q)
+cfold (lit x) = opt (lit x) refl
 
-cfold : ∀ {Γ σ} → Term Γ σ → Term Γ σ
-cfold = result ∘ cfold′
 \end{code}
