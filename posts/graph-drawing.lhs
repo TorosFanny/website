@@ -6,7 +6,7 @@ published: false
 
 Around a year ago, me and some friends wrote a [C++
 tool](https://github.com/scvalex/visigoth) to generate and visualise
-graphs.  I was surprised at how easy it is to 'balance' graph vertices
+graphs.  I was surprised at how easy it is to "balance" graph vertices
 so that they are laid out in a nice way.  This tutorial reproduces a
 basic version of the algorithm in Haskell, using the
 [`gloss`](http://hackage.haskell.org/package/gloss) library to get the
@@ -14,8 +14,7 @@ graph on the screen.  Apart from `gloss` nothing outside the Haskell
 Platform is needed.
 
 This tutorial is aimed at beginners, and only a basic knowledge of
-Haskell is required.  We disregard performance to have simple code,
-eschew combinators in favours of pattern matching or comprehensions, and
+Haskell is required---we disregard performance to have simple code, and
 we don't make use of type classes.
 
 Preliminaries
@@ -32,6 +31,7 @@ clashes with the `Prelude`.
 > import           Graphics.Gloss
 > import           Graphics.Gloss.Data.Vector
 > import           Graphics.Gloss.Interface.Pure.Game
+> import           Graphics.Gloss.Data.ViewState
 > import           System.Random
 
 The idea
@@ -39,14 +39,14 @@ The idea
 
 First, let's frame the problem we want to solve.  We have an undirected
 graph, and we want to position its vertices on a surface so that the
-result is pleasant to look at.  'Pleasant to look at' is still a very
+result is pleasant to look at.  "Pleasant to look at" is still a very
 vague requirement depending on fuzzy things like human taste, and in
 fact there are [many ways to go at this
 problem](http://www.graphviz.org/).
 
 We will gain inspiration from physics, and take vertices to be like
-charged particles repelling each other, and edges to be like 'elastic
-bands' pulling the vertices together.  We will calculate the forces and
+charged particles repelling each other, and edges to be like "elastic
+bands" pulling the vertices together.  We will calculate the forces and
 update the positions in rounds, and hopefully after some time our graph
 will stabilise.  With the right numbers, this gives surprisingly good
 results.
@@ -116,7 +116,7 @@ have a function returing all the edges in the `Graph` so that we can
 draw them.  `Set.foldr` and `Map.foldrWithKey` are equivalent to the
 usual `foldr` for lists, with the twist that with a `Map` we fold over
 the key and value at the same time.  Since the graph is undirected, we
-'order' each edge so that the the vertex with the lower id appears
+"order" each edge so that the the vertex with the lower id appears
 first: in this way we will avoid duplicates like `(1, 2)` and `(2, 1)`.
 
 > graphEdges :: Graph -> Set Edge
@@ -132,20 +132,24 @@ The `Scene`
 -----------
 
 Now that we have our graph, we need a data structure recording the
-position of each point.  We also want to 'grab' points to move them
+position of each point.  We also want to "grab" points to move them
 around the area, so we add a field recording whether we have a `Vertex`
 selected or not.  The invariant for `Scene` is that the set of `Vertex`s
 in `scGraph` is the same as the set of keys in `scPoints`.
 
 > data Scene = Scene
->     { scGraph    :: Graph
->     , scPoints   :: Map Vertex Point
->     , scSelected :: Maybe Vertex
+>     { scGraph     :: Graph
+>     , scPoints    :: Map Vertex Point
+>     , scSelected  :: Maybe Vertex
+>     , scViewState :: ViewState
 >     }
 >
 > emptyScene :: Scene
 > emptyScene =
->     Scene{scGraph = emptyGraph, scPoints = Map.empty, scSelected = Nothing}
+>     Scene{ scGraph     = emptyGraph
+>          , scPoints    = Map.empty
+>          , scSelected  = Nothing
+>          , scViewState = viewStateInit }
 
 Then two predictable operations: one that adds a `Vertex`, with its
 initial position on the scene, and one that adds an `Edge`.  When adding
@@ -221,7 +225,8 @@ colors.
 
 
 > drawScene :: Scene -> Picture
-> drawScene sc@Scene{scGraph = gr} =
+> drawScene sc@Scene{scGraph = gr, scViewState = ViewState{viewStateViewPort = port}} =
+>     applyViewPortToPicture port $
 >     Pictures [Color vertexColor vertices, Color edgeColor edges]
 >   where
 >     vertices = Pictures [drawVertex n sc | n <- Set.toList (grVertices gr)]
@@ -279,25 +284,28 @@ colors.
 >                  else updatePosition dt n sc'
 >         in scAddVertex n pt sc'
 >
-> inCircle :: Point -> Point -> Bool
-> inCircle p center = magV (local center p) <= vertexRadius
+> inCircle :: Point -> Float -> Point -> Bool
+> inCircle p sca center = magV (local center p) <= vertexRadius * sca
 >
-> findVertex :: Point -> Scene -> Maybe Vertex
-> findVertex p1 Scene{scPoints = pts} =
+> findVertex :: Point -> Float -> Scene -> Maybe Vertex
+> findVertex p1 sca Scene{scPoints = pts} =
 >     Map.foldrWithKey'
->     (\v p2 m -> m `mplus` if inCircle p1 p2 then Just v else Nothing)
+>     (\v p2 m -> m `mplus` if inCircle p1 sca p2 then Just v else Nothing)
 >     Nothing pts
 >
 > handleEvent :: Event -> Scene -> Scene
-> handleEvent (EventKey (MouseButton LeftButton) Down _ pos) sc =
->     case findVertex pos sc of
+> handleEvent (EventKey (MouseButton MiddleButton) Down _ pos) sc =
+>     case findVertex (invertViewPort port pos) (viewPortScale port) sc of
 >         Nothing -> sc
 >         Just v  -> sc{scSelected = Just v}
-> handleEvent (EventKey (MouseButton LeftButton) Up _ _) sc =
+>  where viewState = scViewState sc
+>        port      = viewStateViewPort viewState
+> handleEvent (EventKey (MouseButton MiddleButton) Up _ _) sc =
 >     sc{scSelected = Nothing}
 > handleEvent (EventMotion pos) sc@Scene{scPoints = pts, scSelected = Just v} =
->     sc{scPoints = Map.insert v pos pts}
-> handleEvent _ sc = sc
+>     sc{scPoints = Map.insert v (invertViewPort port pos) pts}
+>  where port = viewStateViewPort (scViewState sc)
+> handleEvent ev sc = sc{scViewState = updateViewStateWithEvent ev (scViewState sc)}
 
 > dummy :: [Edge]
 > dummy = [(1, 2), (2, 3), (3, 4), (4, 1)]

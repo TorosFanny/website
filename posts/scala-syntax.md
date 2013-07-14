@@ -7,7 +7,7 @@ published: false
 I’m studying a bit of Scala.  I find the syntax even more amusing than the rest
 of the language:
 
-> In the expression '1 :: twoThree', :: is a method of its right operand, the
+> In the expression `1 :: twoThree`, :: is a method of its right operand, the
 > list, twoThree. You might suspect there’s something amiss with the
 > associativity of the :: method, but it is actually a simple rule to remember:
 > If a method is used in operator notation, such as a * b, the method is invoked
@@ -27,4 +27,4 @@ to *define* a type operator, which is much better.
 
 You can also visit <http://scalapuzzlers.com> for more Scala fun.
 
-[^1]: From 'Programming in Scala, Second Edition'.
+[^1]: From *Programming in Scala, Second Edition*.

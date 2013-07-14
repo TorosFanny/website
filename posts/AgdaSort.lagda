@@ -6,8 +6,8 @@ manageability---type inference is (mostly) decidable, no subtyping, etc.
 However, in the past 30 years, new systems have been emerging that allow the
 user to encode many more properties at the type level.  In fact, these systems
 are so expressive that they are often used as logical frameworks for mathematics
-rather than to write programs, and are thus often called 'theorem provers'
-rather than 'programming languages'.  Thanks to [a notorious
+rather than to write programs, and are thus often called "theorem provers"
+rather than "programming languages."  Thanks to [a notorious
 correspondence](https://en.wikipedia.org/wiki/Curry-Howard), we know that these
 two activities are really the same.[^itt]
 
@@ -18,7 +18,7 @@ Theory](https://en.wikipedia.org/wiki/Intuitionistic_type_theory).
 
 [Agda](http://wiki.portal.chalmers.se/agda/pmwiki.php) is one of the most
 prominent systems of this kind at the moment.  Many Haskell programmers like it
-because it's has very 'functional' slant, doing everything without recurring to
+because it's has very functional slant, doing everything without recurring to
 mechanised transformation of terms (of which [Coq](http://coq.inria.fr/) is the
 most famous offender).  In this blog I will try to give some examples that will
 hopefully make you interested.  This first post explains how sorting algorithms
@@ -36,8 +36,8 @@ to get a taste of what Agda is capable of rather than explaining all its
 features.  If you want to read a document meant to be a more comprehensive
 introduction, you can refer to the [many
 tutorials](http://wiki.portal.chalmers.se/agda/pmwiki.php?n=Main.Othertutorials)
-available---personally I recommend Ulf Norell's 'Dependently Typed Programming
-in Agda'.
+available---personally I recommend Ulf Norell's *Dependently Typed Programming
+in Agda*.
 
 Let's get started!
 
@@ -62,8 +62,8 @@ data List (X : Set) : Set where
 The syntax to declare this type resembles the syntax for
 [GADTs](https://en.wikibooks.org/wiki/Haskell/GADT) in Haskell.  Here `X` is the
 parametrised type---what Agda calls `Set` is more or less what Haskell calls
-`*`, the type of types, or 'kind' in Haskell parlance.  `List` is a type
-constructor which takes a type and 'returns' a new type, `List : Set → Set`,
+`*`, the type of types, or "kind" in Haskell parlance.  `List` is a type
+constructor which takes a type and "returns" a new type, `List : Set → Set`,
 much like Haskell's `[] :: * → *`.
 
 Then we have two constructors, `[]` for an empty list and `_∷_` to cons an
@@ -93,7 +93,7 @@ for `B`.
 
 ### Sums
 
-Now another 'boring' type, `Either`, plus the associated destructor (`either` in
+Now another "boring" type, `Either`, plus the associated destructor (`either` in
 Haskell):
 
 \begin{code}
@@ -123,7 +123,7 @@ absurd : {X : Set} → Empty → X
 absurd ()
 \end{code}
 
-The `()` is what is called an 'empty pattern': Agda knows that no closed term
+The `()` is what is called an *empty pattern*: Agda knows that no closed term
 will be of type `Empty`, and thus lets us leave out the body of functions with
 arguments of that type.  Note that in Haskell we can easily get terms of *any*
 type in various ways, the most straightforward being general recursion:
@@ -137,7 +137,7 @@ Agda makes sure that this is not possible,[^consistent] thus keeping the system
 *consistent*.  This has very pleasant consequences, the most prominent being
 that all programs terminate.  For this reason consistent systems must be
 Turing-incomplete (we can't write an infinite loops!), and thus Agda lets us
-'step out' of these checks if we want to, although it is rarely needed---most
+step out of these checks if we want to, although it is rarely needed---most
 algorithms we write are quite easily provably terminating.  Note that
 consistency wasn't put in Agda only to please mathematicians: given the
 expressivity of the type system type checking and evaluation are tightly
@@ -161,7 +161,7 @@ infix 3 ¬_
 \end{code}
 
 For example we would expect terms of type `¬ (3 > 4)` to exist.  Here it starts
-being clear that types are very 'first class' in Agda; functions can work on
+being clear that types are very first class in Agda; functions can work on
 them as they do with ordinary values: in this case `¬` takes a type and forms
 another one.
 
@@ -179,7 +179,7 @@ Rel : Set → Set₁
 Rel X = X → X → Set
 \end{code}
 
-The `Set₁` indicates that a relation between two `Set`s is 'larger' than a `Set`
+The `Set₁` indicates that a relation between two `Set`s is "larger" than a `Set`
 itself---this is nothing to worry about now, but it follows a tradition in set
 theory that goes back to Russell to avoid paradoxes.[^girards]  `Set` is in fact
 a shorthand for `Set₀` and represents the type of types of values: `Empty : Set₀
@@ -190,7 +190,7 @@ Agda (with `Set : Set` enabled) rendition
 [here](http://code.haskell.org/Agda/test/succeed/Hurkens.agda).
 
 Then we define the type of decidable relations---we would expect relations like
-'less than' on natural numbers or 'sortedness' on lists to be decidable:
+"less than" on natural numbers or "sortedness" on lists to be decidable:
 
 \begin{code}
 Decidable : ∀ {X} → Rel X → Set
@@ -249,8 +249,8 @@ fields of the records using `open`, so that we can use them directly.
 ### Insertion sort
 
 We want to represent bounded lists, but we also want the bounds to be possibly
-'open'.  For this purpose we lift our type `X` in a data type that contains a
-'top' and 'bottom' elements, that are respectively greater or equal and lower or
+open.  For this purpose we lift our type `X` in a data type that contains a
+top and bottom elements, that are respectively greater or equal and lower or
 equal than all the other elements.
 
 \begin{code}
@@ -271,7 +271,7 @@ considerations about the top and bottom elements:
 
 Note that this data type is different from what we have defined before: the
 parameters to the type constructor can vary between data constructors---much
-like in GADTs in Haskell.  In Agda, 'changing' (more formally 'non linear')
+like in GADTs in Haskell.  In Agda, "changing" (more formally "non linear")
 parameters are known as *indices*, as opposed to non-changing *parameters*.
 Parameters are named and to the left of the colon, while the type to the right
 of the colon will determine the number and type of indices---in this case two
@@ -298,7 +298,7 @@ lower bound, and return a list with lower bound `l`, provided that `l ≤̂ ⟦ 
 It's clear from how `cons` work that the elements in `OList` will be ordered
 according to the `≤` relation.
 
-We can easily get a 'normal' list back from an `OList`:
+We can easily get a plain list back from an `OList`:
 
 \begin{code}
   toList : ∀ {l u} → OList l u → List X
@@ -326,7 +326,7 @@ doable but a bit more involved.
 \end{code}
 
 Insertion sort is just a fold, where we use the type `OList ⊥ ⊤` to represent a
-sorted list with 'open' bounds:
+sorted list with open bounds:
 
 \begin{code}
   isort′ : List X → OList ⊥ ⊤
@@ -408,10 +408,10 @@ module PropositionalEquality where
     refl : ∀ {x} → x ≡ x
 \end{code}
 
-It's worth mentioning what 'equal' means here.  I have mentioned earlier that
-'evaluation and typechecking are intertwined': when the type checker has to
-decide if two types, or more generally two terms, are 'the same', it simply
-reduces them as far as possible (to their 'normal form') and then compares
+It's worth mentioning what equal means here.  I have mentioned earlier that
+"evaluation and typechecking are intertwined": when the type checker has to
+decide if two types, or more generally two terms, are "the same", it simply
+reduces them as far as possible (to their *normal form*) and then compares
 them syntactically, plus some additional laws.[^etalaws]  Remember, every Agda
 term is terminating, so this procedure itself is guaranteed to terminate.
 Thus, `refl : ((λ x → x) 1) ≡ 1` is acceptable, and so on.
@@ -423,9 +423,9 @@ B` then `x ≡ fst x , snd x`.  Apart from these *η laws*, other additions can 
 made to have more terms deemed as equal by the type checker, details vary from
 system to system.
 
-This notion of equality is often called 'definitional' equality, as opposed to
+This notion of equality is often called *definitional equality*, as opposed to
 the user-level equality expressed by the inductive family we have just defined,
-which takes the name of 'propositional equality'.  Note that having a
+which takes the name of *propositional equality*.  Note that having a
 prop. equality in scope *does not* imply definitional equality for the related
 terms, unless the prop. equality is a closed term.[^setoid]  In the general case
 we might have prop. equalities in scope that do not necessarily hold or involve
@@ -461,7 +461,7 @@ powerful notion in Agda that is in in most (even dependently typed) programming
 languages---it can not only change the context, but it will also constraint the
 possible constructors of other parameters, if they are of a type with indices
 and those indices have been refined.  This collection of techniques is known as
-'dependent pattern matching'.
+*dependent pattern matching*.
 
 ## Natural numbers
 

@@ -29,7 +29,7 @@ changing that would be trivial using `Data.Set`.
 
 Moreover, the Haskell version has the advantage of working with any list, so for
 example it would work with list of integers as well as Strings.  This could be
-further abstracted to 'unconsable' data types
+further abstracted to "unconsable" data types
 ([ListLike](http://hackage.haskell.org/package/ListLike) offers that and more)
 but that's not that relevant here.
 
