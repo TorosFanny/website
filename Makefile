@@ -2,7 +2,7 @@
 all: site cv/cv.html cv/cv.pdf cv/cv.txt
 	./site build
 
-site:
+site: site.hs
 	ghc --make site.hs
 
 cv/cv.html: cv.html $(HTML_FILES)

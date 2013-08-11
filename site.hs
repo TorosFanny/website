@@ -6,6 +6,7 @@ import           Data.Monoid ((<>))
 import           Agda.Interaction.Options (CommandLineOptions(..), defaultOptions)
 import           Hakyll
 import           Hakyll.Web.Agda
+import           Text.Pandoc.Options (WriterOptions(..))
 
 main :: IO ()
 main =
@@ -19,8 +20,7 @@ main =
 
        -- Posts
        let agdaComp = pandocAgdaCompilerWith defaultHakyllReaderOptions
-                                             defaultHakyllWriterOptions
-                                             agdaOpts
+                                             writerOpts agdaOpts
        match ("posts/*.md" .||. "posts/*.lagda" .||. "posts/*.lhs") $
            do route $ setExtension "html"
               compile $ agdaComp                                              >>=
@@ -88,6 +88,9 @@ feedConf = FeedConfiguration
     , feedAuthorEmail = "f@mazzo.li"
     , feedRoot        = "http://mazzo.li"
     }
+
+writerOpts :: WriterOptions
+writerOpts = defaultHakyllWriterOptions {writerTableOfContents = True}
 
 agdaOpts :: CommandLineOptions
 agdaOpts = defaultOptions {optIncludeDirs = Left [".", "/home/bitonic/src/agda-lib/src"]}
