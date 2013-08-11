@@ -17,7 +17,7 @@ The code works but has some rough edges:
 * The Agda files must be top level modules.
 * An Agda interface file will be generated along the original literate file, so
   you must tell Hakyll to ignore said interface files (which end in `.agdai`).
-* Hakyll metadata is not 'filtered out', so it's better to include it as a
+* Hakyll metadata is not "filtered out", so it's better to include it as a
   separate `.metadata` file.
 * Only links internal to the file will be generated.  Cross links between blog
   posts of the same site could easily be achieved.

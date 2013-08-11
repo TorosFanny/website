@@ -1,10 +1,8 @@
 ---
-title: Yet another dependent λ-calculus tutorial.
+title: Yet another dependent λ-calculus tutorial
 date: 2013-07-03
 published: false
 ---
-
-TODO fixities
 
 > {-# LANGUAGE DeriveFoldable #-}
 > {-# LANGUAGE DeriveFunctor #-}
@@ -15,23 +13,27 @@ TODO fixities
 > {-# LANGUAGE TypeSynonymInstances #-}
 > {-# LANGUAGE ViewPatterns #-}
 > {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+>
 > import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 > import Control.Arrow (first)
 > import Control.Monad (liftM, ap, unless, join)
-> import Control.Monad.State (StateT, runStateT, evalStateT, State, evalState, get, gets, put, modify, lift)
-> import Control.Monad.Error (ErrorT, runErrorT, throwError, Error(..))
 > import Data.Foldable (Foldable, msum, toList)
-> import Data.Map (Map)
-> import qualified Data.Map as Map
 > import Data.Maybe (fromMaybe)
 > import Data.Traversable (Traversable, traverse)
-> import System.Console.Haskeline (InputT, getInputLine, runInputT, defaultSettings)
-> import System.Console.Haskeline.MonadException ()
+>
+> import Control.Monad.State (MonadState(..), StateT, evalStateT, State, evalState, gets)
+> import Control.Monad.Error (ErrorT, runErrorT, throwError, Error(..))
+> import Control.Monad.Trans (lift)
+> import Data.Map (Map)
+> import qualified Data.Map as Map
 > import Text.Parsec ((<?>), ParseError)
 > import qualified Text.Parsec as P
 > import Text.Parsec.String
 > import Text.PrettyPrint (Doc, (<+>), (<>), ($$))
 > import qualified Text.PrettyPrint as PP
+>
+> import System.Console.Haskeline (InputT, getInputLine, runInputT, defaultSettings)
+> import System.Console.Haskeline.MonadException ()
 
 Term representation
 ----
@@ -66,6 +68,9 @@ Term representation
 >     | Fst (Tm v)
 >     | Snd (Tm v)
 >
+>     | Id (Tm v) (Tm v)        -- Equality
+>     | Refl (Tm v)             -- Reflexivity
+>
 >     | Tm v :∈ Ty v            -- Annotated type
 >     deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 > type Ty = Tm
@@ -90,6 +95,8 @@ Term representation
 >     Pair t₁ t₂   >>= f = Pair (t₁ >>= f) (t₂ >>= f)
 >     Fst t        >>= f = Fst (t >>= f)
 >     Snd t        >>= f = Snd (t >>= f)
+>     Id t₁ t₂     >>= f = Id (t₁ >>= f) (t₂ >>= f)
+>     Refl t       >>= f = Refl (t >>= f)
 >     t :∈ ty      >>= f = (t  >>= f) :∈ (ty >>= f)
 >
 > (>>>=) :: (Monad m) => Scope m a -> (a -> m b) -> Scope m b
@@ -138,10 +145,12 @@ Parsing
 >         Absurd <$> (lexeme "absurd" *> pParens)
 >     <|> pArr
 >     <|> pLam
->     <|> pBinder "*" prod pApp
+>     <|> pProd
 >     <|> pPair
 >     <|> Fst <$> (lexeme "fst" *> pParens)
 >     <|> Snd <$> (lexeme "snd" *> pParens)
+>     <|> Id <$> P.try (pParens <* lexeme "=") <*> pParens
+>     <|> Refl <$> (lexeme "refl" *> pParens)
 >     <|> pAnn
 >     <|> pApp
 >     <?> "term"
@@ -152,8 +161,11 @@ Parsing
 >         p   = (:) <$> P.alphaNum <*> P.many idp
 >
 > pParens :: Parser (Tm Id)
-> pParens =
->     (pSingle <|> lexeme "(" *> pCompound <* lexeme ")") <?> "parenthesised term"
+> pParens = (pSingle <|> lexeme "(" *> pCompound <* lexeme ")")
+>           <?> "parenthesised term"
+>
+> pProd :: Parser (Tm Id)
+>  pProd = pBinder "*" prod pApp
 >
 > pArr :: Parser (Tm Id)
 > pArr = bi (pArr <|> pApp) <?> "arrow type"
@@ -161,7 +173,7 @@ Parsing
 >
 > pLam :: Parser (Tm Id)
 > pLam = (lexeme "\\" *> go) <?> "abstraction"
->   where go = lexeme "=>" *> pApp <|>
+>   where go = lexeme "=>" *> pCompound <|>
 >              lam <$> (lexeme "_" <|> pId) <*> go
 >
 > pApp :: Parser (Tm Id)
@@ -183,7 +195,7 @@ Parsing
 >           p
 >
 > pTyped :: Parser a -> Parser (a, Ty Id)
-> pTyped p = (,) <$> P.try (p <* lexeme ":") <*> pApp
+> pTyped p = (,) <$> P.try (p <* lexeme ":") <*> pCompound
 
 Pretty printing
 ----
@@ -216,6 +228,10 @@ Pretty printing
 >            c <$ put (Map.insert v c vcount, Map.insert n (c + 1) idcount)
 
 > type PPM = State (Map Id Count)
+>
+> runPPM :: (Slam v) => (Tm Id -> PPM Doc) -> Tm v -> Doc
+> runPPM f t = evalState (f t') (Map.fromList (zip (toList t') (repeat 1)))
+>   where t' = slam t
 >
 > boundName :: (Foldable m, Monad m) => Scope m Id -> PPM (Maybe Id, m Id)
 > boundName t =
@@ -251,6 +267,8 @@ Pretty printing
 > ppTm' (Pair fs ty)   = middle ", " (ppApp fs) (ppApp ty)
 > ppTm' (Fst t)        = fmap ("fst" <+>) (ppParens t)
 > ppTm' (Snd t)        = fmap ("snd" <+>) (ppParens t)
+> ppTm' (Id t₁ t₂)     = middle " = " (ppParens t₁) (ppParens t₂)
+> ppTm' (Refl t)       = fmap ("refl" <+>) (ppParens t)
 > ppTm' (t :∈ ty)      = middle " : " (ppApp t) (ppApp ty)
 >
 > compound :: Tm v -> Bool
@@ -317,6 +335,8 @@ Reduction
 > nf (Snd t)        = case nf t of
 >                         Pair _ sn -> sn
 >                         t'        -> t'
+> nf (Id t₁ t₂)     = Id (nf t₁) (nf t₂)
+> nf (Refl t)       = Refl (nf t)
 > nf (t :∈ _)       = nf t
 
 Contexts
@@ -335,9 +355,6 @@ Blah blah.[^gadt]
 < lookCtx (_   :◁ t) (Bound _) = Just (Free <$> t)
 
 > type Ctx v m = v -> Maybe (m v)
->
-> insert :: (Eq v) => v -> m v -> Ctx v m -> Ctx v m
-> insert v x ctx v' = if v == v' then Just x else ctx v'
 >
 > (◁) :: (Functor m) => Ctx v m -> m v -> Ctx (Var v) m
 > (_   ◁ t) (Bound _) = Just (Free <$> t)
@@ -388,8 +405,8 @@ Type checking
 > type Tys v = Ctx v Ty
 > type TCMT m v = StateT (Tys v) (ErrorT TyError m)
 >
-> runTCMT :: TCMT m v a -> Tys v -> m (Either TyError (a, Tys v))
-> runTCMT m = runErrorT . runStateT m
+> runTCMT :: Monad m => TCMT m v a -> Tys v -> m (Either TyError a)
+> runTCMT m = runErrorT . evalStateT m
 >
 > lookupTy :: (Slam v, Monad m) => v -> TCMT m v (Ty v)
 > lookupTy v =
@@ -423,12 +440,13 @@ Type checking
 >            tyfs :* _ -> return tyfs
 >            _         -> expectingProd t ty
 > infer (Snd t) =
->     do let t' = nf t
->        ty <- inferNf t'
->        case (t', ty) of
+>     do ty <- inferNf t
+>        case (nf t, ty) of
 >            (Pair fs _, _ :* tysn) -> return (tysn @@ fs)
 >            _                      -> expectingProd t ty
 > infer (t :∈ ty) = ty <$ t ∈ ty
+> infer (Id t₁ t₂) = do ty₁ <- infer t₁; t₂ ∈ ty₁; return Ty
+> infer (Refl t) = do infer t; return (Id t t)
 > infer t = throwError (NotAnnotated (slam t))
 >
 > inferNf :: (Functor m, Monad m, Slam v) => Tm v -> TCMT m v (Ty v)
@@ -438,7 +456,7 @@ Type checking
 > inferBind ty s = do ty ∈ Ty; nest ty (s ∈ Ty); return Ty
 >
 > (∈) :: (Functor m, Monad m, Slam v) => Tm v -> Ty v -> TCMT m v ()
-> t₀ ∈ ty₀ = check (nf t₀) ty₀
+> t₀ ∈ ty₀ = check (nf t₀) (nf ty₀)
 >   where
 >     check :: (Functor m, Monad m, Slam v) => Tm v -> Ty v -> TCMT m v ()
 >     check (Absurd t) _ = check t Empty
@@ -450,32 +468,51 @@ Type checking
 >     check t ty =
 >         do tyt <- inferNf t
 >            unless (ty == tyt) (throwError (Mismatch (slam ty) (slam t) (slam tyt)))
+>
 
 A REPL
 ----
 
-> data Def = Def Id (Ty Id) (Maybe (Tm Id))
-> type Defs = [(Id, (Ty Id, Maybe (Tm Id)))]
+> type Def = Either (Ty Id) (Tm Id)
+> type Defs = Map Id Def
 >
-> pDef :: Parser Def
-> pDef = post <|> body
+> defBody :: Id -> Defs -> Maybe (Tm Id)
+> defBody n defs = join (either (const Nothing) Just <$> Map.lookup n defs)
+> defType :: Id -> Defs -> Maybe (Ty Id)
+> defType n defs = join (either Just (const Nothing) <$> Map.lookup n defs)
+>
+> pDef :: Parser (Id, Def)
+> pDef = post <|> typed <|> def
 >   where
 >     post =
 >         do lexeme "postulate"
 >            (v, ty) <- pTyped pId
->            return (Def v ty Nothing)
->     body =
->         do lexeme "let"
->            (v, ty) <- pTyped pId
+>            return (v, Left ty)
+>     typed =
+>         do (v, ty) <- P.try (lexeme "let" *> pTyped pId)
 >            lexeme ":="
 >            t <- pTm
->            return (Def v ty (Just t))
+>            return (v, Right (t :∈ ty))
+>     def =
+>         do lexeme "let"
+>            v <- pId
+>            lexeme ":="
+>            t <- pTm
+>            return (v, Right t)
+>
+> ppDef :: Id -> Def -> Doc
+> ppDef n (Left ty) =
+>     "postulate" <+> PP.text n <+> ":" <+> runPPM ppApp ty
+> ppDef n (Right (t :∈ ty)) =
+>     "let" <+> PP.text n <+> ":" <+> runPPM ppApp ty <+> ":=" <+> ppTm t
+> ppDef n (Right t) =
+>     "let" <+> PP.text n <+> ":=" <+> ppTm t
 
 > data Input
 >     = IInfer (Tm Id)
 >     | IEval (Tm Id)
 >     | IUEval (Tm Id)
->     | IDef Def
+>     | IDef Id Def
 >     | IQuit
 >     | ISkip
 >     | IDefs
@@ -487,11 +524,13 @@ A REPL
 >     | OQuit
 >     | OOK
 >     | OSkip
+>     | ODefs Defs
 >
 > ppOutput :: Output -> Doc
 > ppOutput (OInfer ty)  = "Type:" $$ nest4 (ppTm ty)
 > ppOutput (OEval t ty) = ppOutput (OInfer ty) $$ ppTm t
 > ppOutput (OUEval t)   = ppTm t
+> ppOutput (ODefs defs) = PP.vcat (map (uncurry ppDef) (Map.toList defs))
 > ppOutput OQuit        = ""
 > ppOutput OOK          = "OK"
 > ppOutput OSkip        = ""
@@ -499,7 +538,7 @@ A REPL
 > pInput :: Parser Input
 > pInput =
 >         (command <?> "command")
->     <|> ((IDef <$> pDef) <?> "definition")
+>     <|> ((uncurry IDef <$> pDef) <?> "definition")
 >     <|> IEval <$> pTm
 >     <|> return ISkip
 >   where
@@ -520,21 +559,19 @@ A REPL
 > unDef :: Defs -> Tm Id -> Tm Id
 > unDef defs t =
 >     do v <- t
->        fromMaybe (Var v) (join (snd <$> lookup v defs))
+>        fromMaybe (Var v) (defBody v defs)
 >
-> newDef :: Def -> Defs -> REPL Defs
-> newDef (Def n ty₀ tm₀) defs =
->     do ty ∈ Ty
->        body <- case tm of
->                    Nothing | Just _ <- lookup n defs ->
->                        throwError (Duplicate n)
->                    Nothing -> return Nothing
->                    Just t  -> Just (t :∈ ty) <$ t ∈ ty
->        modify (insert n ty)
->        return ((n, (ty, body)) : defs)
->   where
->     tm = unDef defs <$> tm₀
->     ty = unDef defs ty₀
+> newDef :: Id -> Def -> Defs -> REPL Defs
+> newDef n (Left _) defs | Just _ <- Map.lookup n defs =
+>      throwError (Duplicate n)
+> newDef n (Left ty₀) defs =
+>     do let ty = unDef defs ty₀
+>        ty ∈ Ty
+>        return (Map.insert n (Left ty) defs)
+> newDef n (Right t₀) defs =
+>     do let t = unDef defs t₀
+>        infer t
+>        return (Map.insert n (Right t) defs)
 
 > repl :: String -> Defs -> REPL (Output, Defs)
 > repl inps defs =
@@ -543,7 +580,8 @@ A REPL
 >            IInfer (unDef defs -> t) -> (, defs) . OInfer <$> infer t
 >            IEval  (unDef defs -> t) -> (, defs) . OEval (nf t) <$> infer t
 >            IUEval (unDef defs -> t) -> return (OUEval (nf t), defs)
->            IDef def                 -> (OOK,) <$> newDef def defs
+>            IDef n def               -> (OOK,) <$> newDef n def defs
+>            IDefs                    -> return (ODefs defs, defs)
 >            IQuit                    -> return (OQuit, defs)
 >            ISkip                    -> return (OSkip, defs)
 
@@ -555,16 +593,14 @@ A REPL
 >            Just s ->
 >                do res <- lift (runTCMT (repl s defs) tys)
 >                   case res of
->                       Left err ->
->                            do putDocLn (ppError err)
->                               run defs
->                       Right ((OQuit, _), _) -> return ()
->                       Right ((out, defs'), _) ->
->                           do putDocLn (ppOutput out)
->                              run defs'
+>                       Left err           -> do putDocLn (ppError err)
+>                                                run defs
+>                       Right (OQuit, _)   -> return ()
+>                       Right (out, defs') -> do putDocLn (ppOutput out)
+>                                                run defs'
 >   where
 >     putDocLn = lift . putStrLn . PP.render
->     tys v    = fst <$> lookup v defs
+>     tys v = defType v defs
 
 > main :: IO ()
-> main = runInputT defaultSettings (run [])
+> main = runInputT defaultSettings (run Map.empty)
