@@ -1,21 +1,26 @@
 ---
-title: Drawing graphs with gloss
+title: Graphs: a balancing act
 date: 2013-05-27
 published: false
 ---
 
 Around a year ago, me and some friends wrote a [C++
 tool](https://github.com/scvalex/visigoth) to generate and visualise
-graphs.  I was surprised at how easy it is to "balance" graph vertices
-so that they are laid out in a nice way.  This tutorial reproduces a
-basic version of the algorithm in Haskell, using the
+graphs.  After finding a [nice
+tutorial](http://harmattan-dev.nokia.com/docs/library/html/qt4/graphicsview-elasticnodes.html)
+on the subject, I was surprised at how easy it is to "balance" graph
+vertices so that they are laid out in a nice way.  This tutorial
+reproduces a version of the algorithm in Haskell, using the
 [`gloss`](http://hackage.haskell.org/package/gloss) library to get the
 graph on the screen.  Apart from `gloss` nothing outside the Haskell
 Platform is needed.
 
 This tutorial is aimed at beginners, and only a basic knowledge of
-Haskell is required---we disregard performance to have simple code, and
-we don't make use of type classes.
+Haskell is required---we disregard performance in favour of simple code.
+Here is a preview of the result:
+
+<div class="yt"><iframe width="600" height="450" src="http://www.youtube.com/embed/RoCObV1YJBY" frameborder="0" allowfullscreen></iframe></div>
+
 
 Preliminaries
 -------------
@@ -23,16 +28,18 @@ Preliminaries
 We import the libraries we need, qualifying `Map` and `Set` avoiding
 clashes with the `Prelude`.
 
-> import           Control.Monad (mplus)
-> import           Data.Map.Strict (Map)
+> import Control.Monad (mplus)
+>
+> import Data.Map.Strict (Map)
 > import qualified Data.Map.Strict as Map
-> import           Data.Set (Set)
+> import Data.Set (Set)
 > import qualified Data.Set as Set
-> import           Graphics.Gloss
-> import           Graphics.Gloss.Data.Vector
-> import           Graphics.Gloss.Interface.Pure.Game
-> import           Graphics.Gloss.Data.ViewState
-> import           System.Random
+> import System.Random
+>
+> import Graphics.Gloss
+> import Graphics.Gloss.Data.Vector
+> import Graphics.Gloss.Data.ViewState
+> import Graphics.Gloss.Interface.Pure.Game
 
 The idea
 --------
@@ -45,11 +52,13 @@ fact there are [many ways to go at this
 problem](http://www.graphviz.org/).
 
 We will gain inspiration from physics, and take vertices to be like
-charged particles repelling each other, and edges to be like "elastic
-bands" pulling the vertices together.  We will calculate the forces and
+charged particles repelling each other, and edges to be like elastic
+bands pulling the vertices together.  We will calculate the forces and
 update the positions in rounds, and hopefully after some time our graph
 will stabilise.  With the right numbers, this gives surprisingly good
-results.
+results: clusters of vertices are held together by the numberous edges
+between them, while sparsely connected vertices remain distance, thus
+reducing clutter.
 
 The `Graph`
 -----------
@@ -61,38 +70,33 @@ We need some kind of identifier for our vertices, we will simply go for
 > type Edge = (Vertex, Vertex)
 
 We want to store our graph so that the operations we need to execute are
-as natural as possible.  Given the algorithm above, we need to do two
-things well: iterating through all the vertices, and iterating through
-the neighbours of a given vertex.  With that in mind, the obvious thing
-to do is to have the graph to be a set of vertices, and a mapping from
-each vertex to its neighbours.
+as natural as possible.  Given the algorithm outline given above, we
+need to do two things well: iterating through all the vertices, and
+iterating through the neighbours of a given vertex.  With that in mind,
+the simplest thing to do is simply store the graph as the set of
+neighbouring nodes for each `Vertex`:
 
-> data Graph = Graph
->     { grVertices :: Set Vertex
->     , grNeighs   :: Map Vertex (Set Vertex)
->     }
+> newtype Graph = Graph {grNeighs :: Map Vertex (Set Vertex)}
 >
 > emptyGraph :: Graph
-> emptyGraph = Graph{grVertices = Set.empty, grNeighs = Map.empty}
+> emptyGraph = Graph Map.empty
 
-When we add a vertex, we add it to the set of vertices of the graph, and
-make sure that a set of neighbours exist for that vertex.  In this way
-adding existing vertices will not modify the graph.
+When we add a vertex, we make sure that a set of neighbours exist for
+that vertex.  In this way adding existing vertices will not modify the
+graph.
 
 > addVertex :: Vertex -> Graph -> Graph
-> addVertex v gr@Graph{grVertices = vs, grNeighs = neighs} =
->     gr{ grVertices = Set.insert v vs
->       , grNeighs   = case Map.lookup v neighs of
->                          Nothing -> Map.insert v Set.empty neighs
->                          Just _  -> neighs
->       }
+> addVertex v (Graph neighs) =
+>     Graph $ case Map.lookup v neighs of
+>                 Nothing -> Map.insert v Set.empty neighs
+>                 Just _  -> neighs
 
 When we add an `Edge`, we first make sure that the vertices provided are
 present in the graph by adding them, and then add each vertex to the
 other vertex's neighbours.
 
 > addEdge :: Edge -> Graph -> Graph
-> addEdge (v1, v2) gr = gr'{grNeighs = neighs}
+> addEdge (v1, v2) gr = Graph neighs
 >   where
 >     gr'    = addVertex v1 (addVertex v2 gr)
 >     neighs = Map.insert v1 (Set.insert v2 (vertexNeighs v1 gr')) $
@@ -105,11 +109,14 @@ when `addVertex` is used, and the `Edge`'s vertices to be present with
 `addEdge`.  However making operations safe is always a good idea,
 especially if the cost is very low like in this case.
 
+TODO maybe reword above: it's not that much about safeness here but
+about unsurprisingness, see how `insert' works for containers etc.
+
 `vertexNeighs` unsafely gets the neighbours of a given `Vertex`: the
 precondition is that the `Vertex` provided is in the graph.
 
 > vertexNeighs :: Vertex -> Graph -> Set Vertex
-> vertexNeighs v Graph{grNeighs = neighs} = neighs Map.! v
+> vertexNeighs v (Graph neighs) = neighs Map.! v
 
 This is all we need to implement the algorithm.  It is also useful to
 have a function returing all the edges in the `Graph` so that we can
@@ -134,8 +141,11 @@ The `Scene`
 Now that we have our graph, we need a data structure recording the
 position of each point.  We also want to "grab" points to move them
 around the area, so we add a field recording whether we have a `Vertex`
-selected or not.  The invariant for `Scene` is that the set of `Vertex`s
-in `scGraph` is the same as the set of keys in `scPoints`.
+grabbed or not.  We also make use of `gloss` `ViewState`, a tool to
+offer common operations such as panning and zooming to the user.
+
+The invariant for `Scene` is that the set of `Vertex`s in `scGraph` is
+the same as the set of keys in `scPoints`.
 
 > data Scene = Scene
 >     { scGraph     :: Graph
@@ -205,33 +215,16 @@ Bringing everything together, we generate `Picture`s for all the
 vertices and all the edges, and then combine those with the appropriate
 colors.
 
-> windowSize :: (Int, Int)
-> windowSize = (640, 480)
->
-> fromEdges :: StdGen -> [Edge] -> Scene
-> fromEdges gen es =
->     foldr scAddEdge (fst (Set.foldr' addv (emptyScene, gen) vs)) es
->   where
->     vs = Set.fromList (concat [[v1, v2] | (v1, v2) <- es])
->
->     -- `fromIntegral' is needed to convert from `Int' to `Float'.
->     halfWidth  = fromIntegral (fst windowSize) / 2
->     halfHeight = fromIntegral (snd windowSize) / 2
->
->     addv v (sc, gen1) =
->         let (x, gen2) = randomR (-halfWidth,  halfWidth) gen1
->             (y, gen3) = randomR (-halfHeight, halfHeight) gen2
->         in  (scAddVertex v (x, y) sc, gen3)
-
-
 > drawScene :: Scene -> Picture
 > drawScene sc@Scene{scGraph = gr, scViewState = ViewState{viewStateViewPort = port}} =
 >     applyViewPortToPicture port $
 >     Pictures [Color vertexColor vertices, Color edgeColor edges]
 >   where
->     vertices = Pictures [drawVertex n sc | n <- Set.toList (grVertices gr)]
+>     vertices = Pictures [drawVertex n sc | n <- Map.keys (grNeighs gr)    ]
 >     edges    = Pictures [drawEdge e sc   | e <- Set.toList (graphEdges gr)]
 
+Balancing
+----
 
 > fps :: Int
 > fps = 30
@@ -239,45 +232,46 @@ colors.
 > adjust :: Float -> Float -> Float
 > adjust dt x = x * dt * fromIntegral fps
 >
-> local :: Point -> Point -> Vector
-> local (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
+> pushWeight :: Float
+> pushWeight = 10
 >
 > pushVelocity :: Float -> Point -> Point -> Vector
 > pushVelocity dt v1 v2 =
 >     if l > 0 -- If we are analysing the same vertex, l = 0
 >     then (dx * weight / l, dy * weight / l)
->     else (0, 0)
+>     else 0
 >   where
->     weight   = adjust dt 120
->     (dx, dy) = local v1 v2
+>     weight   = adjust dt pushWeight
+>     (dx, dy) = v1 - v2
 >     l        = 2 * (dx * dx + dy * dy)
+>
+> pullWeight :: Float
+> pullWeight = 10
 >
 > pullVelocity :: Int -> Float -> Point -> Point -> Vector
 > pullVelocity nedges dt v1 v2 =
->     (-(dx / weight), -(dy / weight))
+>     (-dx / weight, -dy / weight)
 >   where
->     (dx, dy) = local v1 v2
->     weight   = adjust dt (fromIntegral (nedges + 1) * 10)
+>     (dx, dy) = v1 - v2
+>     weight   = adjust dt (fromIntegral (nedges + 1) * pullWeight)
 >
 > updatePosition :: Float -> Vertex -> Scene -> Point
 > updatePosition dt v1 sc@Scene{scPoints = pts, scGraph = gr} =
->     addVel v1pos (pull (push (0, 0)))
+>     v1pos + pull (push 0)
 >   where
 >     v1pos  = vertexPos v1 sc
 >     neighs = vertexNeighs v1 gr
 >
->     addVel (x, y) (x', y') = (x + x', y + y')
->
 >     push vel =
->         Map.foldr' (\v2pos -> addVel (pushVelocity dt v1pos v2pos))
+>         Map.foldr' (\v2pos -> (pushVelocity dt v1pos v2pos +))
 >                    vel pts
 >     pull vel =
->         foldr (addVel . pullVelocity (Set.size neighs) dt v1pos)
+>         foldr ((+) . pullVelocity (Set.size neighs) dt v1pos)
 >               vel [vertexPos v2 sc | v2 <- Set.toList neighs]
 
 > updatePositions :: Float -> Scene -> Scene
 > updatePositions dt sc@Scene{scSelected = sel, scGraph = gr} =
->     foldr uppt sc . Set.toList . grVertices $ gr
+>     foldr uppt sc . Map.keys . grNeighs $ gr
 >   where
 >     uppt n sc' =
 >         let pt = if Just n == sel then vertexPos n sc
@@ -285,7 +279,7 @@ colors.
 >         in scAddVertex n pt sc'
 >
 > inCircle :: Point -> Float -> Point -> Bool
-> inCircle p sca center = magV (local center p) <= vertexRadius * sca
+> inCircle p sca center = magV (center - p) <= vertexRadius * sca
 >
 > findVertex :: Point -> Float -> Scene -> Maybe Vertex
 > findVertex p1 sca Scene{scPoints = pts} =
@@ -294,18 +288,19 @@ colors.
 >     Nothing pts
 >
 > handleEvent :: Event -> Scene -> Scene
-> handleEvent (EventKey (MouseButton MiddleButton) Down _ pos) sc =
+> handleEvent (EventKey (MouseButton LeftButton) Down Modifiers{ctrl = Down} pos) sc =
 >     case findVertex (invertViewPort port pos) (viewPortScale port) sc of
 >         Nothing -> sc
 >         Just v  -> sc{scSelected = Just v}
 >  where viewState = scViewState sc
 >        port      = viewStateViewPort viewState
-> handleEvent (EventKey (MouseButton MiddleButton) Up _ _) sc =
+> handleEvent (EventKey (MouseButton LeftButton) Up _ _) sc@Scene{scSelected = Just _} =
 >     sc{scSelected = Nothing}
 > handleEvent (EventMotion pos) sc@Scene{scPoints = pts, scSelected = Just v} =
 >     sc{scPoints = Map.insert v (invertViewPort port pos) pts}
 >  where port = viewStateViewPort (scViewState sc)
-> handleEvent ev sc = sc{scViewState = updateViewStateWithEvent ev (scViewState sc)}
+> handleEvent ev sc =
+>     sc{scViewState = updateViewStateWithEvent ev (scViewState sc)}
 
 > sampleGraph :: [Edge]
 > sampleGraph =
@@ -326,11 +321,30 @@ colors.
 >      (43, 17)
 >     ]
 >
+> windowSize :: (Int, Int)
+> windowSize = (640, 480)
+>
 > sceneWindow :: Scene -> IO ()
 > sceneWindow sc =
->     play (InWindow "Graph Drawing" (640, 480) (10, 10))
+>     play (InWindow "Graph Drawing - ctrl + left mouse button to drag" windowSize (10, 10))
 >          black 30 sc drawScene handleEvent updatePositions
 >
+>
+> fromEdges :: StdGen -> [Edge] -> Scene
+> fromEdges gen es =
+>     foldr scAddEdge (fst (Set.foldr' addv (emptyScene, gen) vs)) es
+>   where
+>     vs = Set.fromList (concat [[v1, v2] | (v1, v2) <- es])
+>
+>     -- `fromIntegral' is needed to convert from `Int' to `Float'.
+>     halfWidth  = fromIntegral (fst windowSize) / 2
+>     halfHeight = fromIntegral (snd windowSize) / 2
+>
+>     addv v (sc, gen1) =
+>         let (x, gen2) = randomR (-halfWidth,  halfWidth)  gen1
+>             (y, gen3) = randomR (-halfHeight, halfHeight) gen2
+>         in  (scAddVertex v (x, y) sc, gen3)
+
 > main :: IO ()
 > main =
 >     do gen <- getStdGen
