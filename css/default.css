@@ -221,3 +221,8 @@ table.sourceCode {
 .sc {
   font-variant: small-caps;
 }
+
+.yt {
+  text-align: center;
+  margin: 0.3em 0;
+}
