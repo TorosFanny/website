@@ -1,13 +1,12 @@
 ---
 title: Graphs: a balancing act
 date: 2013-08-13
-published: false
 ---
 
-Around a year ago, me and some friends wrote a [C++
+A while ago, me and some friends wrote a [C++
 tool](https://github.com/scvalex/visigoth) to generate and visualise
 graphs, and I was surprised at how easy it is to "balance" graph
-vertices so that they are laid out in a nice way.  This tutorial
+vertices so that they are laid out in a nice way. This tutorial
 reproduces a version of the algorithm in Haskell, using the
 [`gloss`](http://hackage.haskell.org/package/gloss) library to get the
 graph on the screen.  Apart from `gloss` nothing outside the Haskell
@@ -15,14 +14,14 @@ Platform is needed.[^version]
 
 [^version]: Note that you need the very last version of `gloss`,
 1.8.0.1, for this code to work.  The author spent some time hacking on
-gloss to make this code simpler, and the changes were just merged.
+gloss to make this code simpler, and the changes have been merged
+recently.
 
 This tutorial is aimed at beginners, and only a basic knowledge of
 Haskell is required---we disregard performance in favour of simple code.
 Here is a preview of the result:
 
-<div class="yt"><iframe width="600" height="450" src="http://www.youtube.com/embed/RoCObV1YJBY" frameborder="0" allowfullscreen></iframe></div>
-
+<div class="yt"><iframe width="600" height="450" src="http://www.youtube.com/embed/lehmgscv7rk" frameborder="0" allowfullscreen></iframe></div>
 
 Preliminaries
 ----
@@ -53,12 +52,15 @@ problem](http://www.graphviz.org/).
 
 We will gain inspiration from physics, and take vertices to be like
 charged particles repelling each other, and edges to be like elastic
-bands pulling the vertices together.  We will calculate the forces and
-update the positions in rounds, and hopefully after some time our graph
-will stabilise.  With the right numbers, this gives surprisingly good
-results: clusters of vertices are held together by the numberous edges
-between them, while sparsely connected vertices remain distant, reducing
-clutter.
+bands pulling the vertices together.[^force] We will calculate the
+forces and update the positions in rounds, and hopefully after some time
+our graph will stabilise.  With the right numbers, this gives
+surprisingly good results: clusters of vertices are held together by the
+numerous edges between them, while sparsely connected vertices remain
+distant, reducing clutter.
+
+[^force]: This class of algorithms is known as [*force-directed graph
+drawing*](http://en.wikipedia.org/wiki/Force-directed_graph_drawing).
 
 The `Graph`
 ----
@@ -133,8 +135,8 @@ The `Scene`
 ----
 
 Now that we have our graph, we need a data structure recording the
-position of each point.  We also want to "grab" points to move them
-around the area, so we add a field recording whether we have a `Vertex`
+position of each point.  We also want to be able to "grab" points to
+move them around, so we add a field recording whether we have a `Vertex`
 grabbed or not.  We also make use of `gloss` `ViewState`, which will let
 us implement panning, rotating, and zooming in an easy way.
 
@@ -224,11 +226,9 @@ Now to the interesting part, the code necessary to balance the graph.
 As mentioned, we have two contrasting forces.  Each vertex "pushes" all
 the others away, and each edge "pulls" together the connected vertices.
 
-TODO fix link below
-
 First we define a function for the "pushing" force, resulting from the
 charge of the vertices.
-[Predictably](http://en.wikipedia.org/wiki/Coulomb's_law), the force
+[Predictably](http://en.wikipedia.org/wiki/Coulomb%27s_law), the force
 will be inversely proportional to the square of the distance of the two
 vertices.  Importing `Graphics.Gloss.Data.Vector` defines
 
@@ -258,11 +258,9 @@ vertices will be.
 >     d = v1 - v2
 >     l = magV d ** 2
 
-TODO fix link below
-
 For what concerns the force that pulls connected vertices together, it
 will be [proportional to the distance of the two
-edges](http://en.wikipedia.org/wiki/Hooke's_law), so we can take the
+edges](http://en.wikipedia.org/wiki/Hooke%27s_law), so we can take the
 distance vector directly and multiply it by the stiffness, although this
 time ve have the vector point in the other direction, since this force
 brings the vertices together.
@@ -449,7 +447,20 @@ we give some suggestions.
 
     The code does not scale well for big graphs, for a number of reason.
 
-    *   *QuadTree/Voronoi spaces*: TODO
+    *   *QuadTree/Voronoi spaces*: Currently our algorithm is cubic: for
+        each vertex we go over all the other vertices for the push forces
+        and over all the neighbours for the pull forces.
+
+        It can be make much faster by approximating distant clusters of
+        vertices to a single particle with higher charge.  An easy way is
+        to subdivide recursively the space into squares, a goal achievable
+        by storing the graph in a [*QuadTree*](http://en.wikipedia.org/wiki/Quadtree).[^quadtree]
+        Then squares that are far enough are deemed as one entity.[^bh]
+
+        A more precise but also more expensive way is to subdivide the
+        space in a more irregular way depending on the disposition of the
+        vertices, for example in what is called a
+        [*Voronoi diagram*](http://en.wikipedia.org/wiki/Voronoi_diagram).
 
     *   *Arrays*: Currently, once a graph is loaded, it stays the same
         forever.  This considered, using `Map` is quite a waste: we can
@@ -468,9 +479,11 @@ we give some suggestions.
 
     *   *Generating graphs*: Generating realistic graphs is an interesting
         and useful challenge.  It turns out that many real networks, such
-        as friendships and the web, share certain characteristics
+        as friendships and the web, share certain characteristics---networks
+        of this kind are called [small-world networks](http://en.wikipedia.org/wiki/Small-world_network), 
+        and various algorithms to generate them are available.
 
-    *   *3D view*: The algorithm can be trivially extended to the 3rd
+    *   *3D*: The algorithm can be trivially extended to the 3rd
         dimension---in fact given the right `Num` instances it will work in
         automatically, and with some type class trickery in any dimension.
 
@@ -481,4 +494,13 @@ we give some suggestions.
         `dot` or similar format, so that experiments could be ran on
         existing graphs.
 
+[^quadtree]: `gloss` provides a module to work with QuadTrees,
+`Graphics.Gloss.Data.QuadTree`.
+
+[^bh]: This approach is known as [*Barnes-Hut
+simulation*](http://en.wikipedia.org/wiki/Barnes%E2%80%93Hut_simulation).
+
 If you implement any of the above in a nice way, let me know!
+
+As usual, comments on [Reddit](http://www.reddit.com/r/haskell/comments/1kb36j/graph_drawing_with_gloss/).
+
