@@ -13,8 +13,8 @@ contains many similar examples.
 [^ulf]: See also the Agda version by Ulf Norell in his [*Dependently
     Typed Programming in
     Agda*](http://www.cse.chalmers.se/~ulfn/papers/afp08/tutorial.pdf‎)
-    tutorial, after which the data types for this tutorial are patterned
-    after.
+    tutorial, after which some of the data types for this tutorial are
+    patterned after.
 
 Let's get started.
 
