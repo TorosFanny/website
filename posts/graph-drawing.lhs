@@ -1,5 +1,5 @@
 ---
-title: Graphs: a balancing act
+title: Graphs: a Balancing Act
 date: 2013-08-13
 ---
 
@@ -214,7 +214,7 @@ the picture.
 > drawScene :: Scene -> Picture
 > drawScene sc@Scene{scGraph = gr, scViewState = ViewState{viewStateViewPort = port}} =
 >     applyViewPortToPicture port $
->     Pictures [Color vertexColor vertices, Color edgeColor edges]
+>     Pictures [Color edgeColor edges, Color vertexColor vertices]
 >   where
 >     vertices = Pictures [drawVertex n sc | n <- Map.keys (grNeighs gr)    ]
 >     edges    = Pictures [drawEdge e sc   | e <- Set.toList (graphEdges gr)]
@@ -230,7 +230,7 @@ First we define a function for the "pushing" force, resulting from the
 charge of the vertices.
 [Predictably](http://en.wikipedia.org/wiki/Coulomb%27s_law), the force
 will be inversely proportional to the square of the distance of the two
-vertices.  Importing `Graphics.Gloss.Data.Vector` defines
+vertices.  `Graphics.Gloss.Data.Vector` defines
 
     type Vector = (Float, Float)
 
@@ -241,7 +241,7 @@ direction of the force.
 The charge of each particle has been determined empirically to give good
 results---increasing it will lead to a more "spaced out" graph,
 decreasing it a more crowded one.  `mulSV` lets us multiply `Vector`s by
-scalars, and `magV` lets us get the magnitude of a vector (in this case
+scalars, `magV` lets us get the magnitude of a vector (in this case
 the distance).  Varying the charge will determine how far apart the
 vertices will be.
 
@@ -283,8 +283,8 @@ round:
 >   where
 >     v1pos  = vertexPos v1 sc
 >
->     -- Gets a velocity by multiplying the time by the force (we assume
->     -- a mass of 1).
+>     -- Gets a velocity by multiplying the time by the force (we take
+>     -- the mass to be 1).
 >     getVel f v2pos = dt `mulSV` f v1pos v2pos
 >
 >     -- Sum all the pushing and pulling.  All the other vertices push,
@@ -447,11 +447,11 @@ we give some suggestions.
 
     The code does not scale well for big graphs, for a number of reason.
 
-    *   *QuadTree/Voronoi spaces*: Currently our algorithm is cubic: for
+    *   *QuadTree/Voronoi diagram*: Currently our algorithm is cubic: for
         each vertex we go over all the other vertices for the push forces
         and over all the neighbours for the pull forces.
 
-        It can be make much faster by approximating distant clusters of
+        It can be made much faster by approximating distant clusters of
         vertices to a single particle with higher charge.  An easy way is
         to subdivide recursively the space into squares, a goal achievable
         by storing the graph in a [*QuadTree*](http://en.wikipedia.org/wiki/Quadtree).[^quadtree]
@@ -479,8 +479,8 @@ we give some suggestions.
 
     *   *Generating graphs*: Generating realistic graphs is an interesting
         and useful challenge.  It turns out that many real networks, such
-        as friendships and the web, share certain characteristics---networks
-        of this kind are called [small-world networks](http://en.wikipedia.org/wiki/Small-world_network), 
+        as friendships and the web, share certain characteristics.  Such
+        networks are known as [small-world networks](http://en.wikipedia.org/wiki/Small-world_network), 
         and various algorithms to generate them are available.
 
     *   *3D*: The algorithm can be trivially extended to the 3rd
