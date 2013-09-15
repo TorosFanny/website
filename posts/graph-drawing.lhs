@@ -208,7 +208,7 @@ Drawing an `Edge` is drawing a `Line`.
 Bringing everything together, we generate `Picture`s for all the
 vertices and all the edges, and then combine those with the appropriate
 colours.  Moreover we get the `ViewPort` in the `ViewState`---which
-stores the current translation, rotation, and scaling--- and apply it to
+stores the current translation, rotation, and scaling---and apply it to
 the picture.
 
 > drawScene :: Scene -> Picture
