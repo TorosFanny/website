@@ -1,5 +1,5 @@
 ---
-title: Haskell, Python and readability
+title: Haskell, Python, and Readability
 date: 2012-02-27
 ---
 
