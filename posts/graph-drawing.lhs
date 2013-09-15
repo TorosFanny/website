@@ -33,20 +33,12 @@ clashes with the `Prelude`.
 > import qualified Data.Map.Strict as Map
 > import Data.Set (Set)
 > import qualified Data.Set as Set
-<<<<<<< HEAD
 > import System.Random
 >
 > import Graphics.Gloss
 > import Graphics.Gloss.Data.Vector
 > import Graphics.Gloss.Data.ViewState
 > import Graphics.Gloss.Interface.Pure.Game
-=======
-> import           Graphics.Gloss
-> import           Graphics.Gloss.Data.Vector
-> import           Graphics.Gloss.Interface.Pure.Game
-> import           Graphics.Gloss.Data.ViewState
-> import           System.Random
->>>>>>> f27578ab4374f23b302ae5a3fd1118d4e8fc9086
 
 The idea
 ----
