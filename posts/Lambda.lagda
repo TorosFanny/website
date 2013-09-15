@@ -323,7 +323,8 @@ check : ∀ {n} (Γ : Ctx n) (t : Syntax) → Check Γ t
 \end{code}
 
 With `var`, we make sure that the index is in scope using `fromℕ`.  If
-it is, the type is determined by what's in the at the right index:
+it is, the type is determined by what's in the context at the right
+index:
 
 \begin{code}
 check {n} Γ (var v) with fromℕ n v
