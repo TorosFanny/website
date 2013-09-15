@@ -260,7 +260,7 @@ vertices will be.
 
 For what concerns the force that pulls connected vertices together, it
 will be [proportional to the distance of the two
-edges](http://en.wikipedia.org/wiki/Hooke%27s_law), so we can take the
+vertices](http://en.wikipedia.org/wiki/Hooke%27s_law), so we can take the
 distance vector directly and multiply it by the stiffness, although this
 time ve have the vector point in the other direction, since this force
 brings the vertices together.
