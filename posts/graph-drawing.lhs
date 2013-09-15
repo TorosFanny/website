@@ -33,12 +33,20 @@ clashes with the `Prelude`.
 > import qualified Data.Map.Strict as Map
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+<<<<<<< HEAD
 > import System.Random
 >
 > import Graphics.Gloss
 > import Graphics.Gloss.Data.Vector
 > import Graphics.Gloss.Data.ViewState
 > import Graphics.Gloss.Interface.Pure.Game
+=======
+> import           Graphics.Gloss
+> import           Graphics.Gloss.Data.Vector
+> import           Graphics.Gloss.Interface.Pure.Game
+> import           Graphics.Gloss.Data.ViewState
+> import           System.Random
+>>>>>>> f27578ab4374f23b302ae5a3fd1118d4e8fc9086
 
 The idea
 ----
@@ -51,6 +59,7 @@ fact there are [many ways to go at this
 problem](http://www.graphviz.org/).
 
 We will gain inspiration from physics, and take vertices to be like
+<<<<<<< HEAD
 charged particles repelling each other, and edges to be like elastic
 bands pulling the vertices together.[^force] We will calculate the
 forces and update the positions in rounds, and hopefully after some time
@@ -61,6 +70,13 @@ distant, reducing clutter.
 
 [^force]: This class of algorithms is known as [*force-directed graph
 drawing*](http://en.wikipedia.org/wiki/Force-directed_graph_drawing).
+=======
+charged particles repelling each other, and edges to be like "elastic
+bands" pulling the vertices together.  We will calculate the forces and
+update the positions in rounds, and hopefully after some time our graph
+will stabilise.  With the right numbers, this gives surprisingly good
+results.
+>>>>>>> f27578ab4374f23b302ae5a3fd1118d4e8fc9086
 
 The `Graph`
 ----
@@ -135,6 +151,7 @@ The `Scene`
 ----
 
 Now that we have our graph, we need a data structure recording the
+<<<<<<< HEAD
 position of each point.  We also want to be able to "grab" points to
 move them around, so we add a field recording whether we have a `Vertex`
 grabbed or not.  We also make use of `gloss` `ViewState`, which will let
@@ -146,6 +163,19 @@ us implement panning, rotating, and zooming in an easy way.
 >           , scPoints    :: Map Vertex Point
 >           , scSelected  :: Maybe Vertex
 >           , scViewState :: ViewState }
+=======
+position of each point.  We also want to "grab" points to move them
+around the area, so we add a field recording whether we have a `Vertex`
+selected or not.  The invariant for `Scene` is that the set of `Vertex`s
+in `scGraph` is the same as the set of keys in `scPoints`.
+
+> data Scene = Scene
+>     { scGraph     :: Graph
+>     , scPoints    :: Map Vertex Point
+>     , scSelected  :: Maybe Vertex
+>     , scViewState :: ViewState
+>     }
+>>>>>>> f27578ab4374f23b302ae5a3fd1118d4e8fc9086
 >
 > emptyScene :: Scene
 > emptyScene =
@@ -214,7 +244,11 @@ the picture.
 > drawScene :: Scene -> Picture
 > drawScene sc@Scene{scGraph = gr, scViewState = ViewState{viewStateViewPort = port}} =
 >     applyViewPortToPicture port $
+<<<<<<< HEAD
 >     Pictures [Color edgeColor edges, Color vertexColor vertices]
+=======
+>     Pictures [Color vertexColor vertices, Color edgeColor edges]
+>>>>>>> f27578ab4374f23b302ae5a3fd1118d4e8fc9086
 >   where
 >     vertices = Pictures [drawVertex n sc | n <- Map.keys (grNeighs gr)    ]
 >     edges    = Pictures [drawEdge e sc   | e <- Set.toList (graphEdges gr)]
@@ -304,6 +338,7 @@ user, if there is one.
 >     f n sc' =
 >         let pt = if Just n == sel then vertexPos n sc else updatePosition dt n sc'
 >         in scAddVertex n pt sc'
+<<<<<<< HEAD
 
 User interaction
 ----
@@ -355,6 +390,26 @@ When the user releases the left mouse button and a vertex is selected,
 we deselect it:
 
 > handleEvent (EventKey (MouseButton LeftButton) Up _ _) sc@Scene{scSelected = Just _} =
+=======
+>
+> inCircle :: Point -> Float -> Point -> Bool
+> inCircle p sca center = magV (local center p) <= vertexRadius * sca
+>
+> findVertex :: Point -> Float -> Scene -> Maybe Vertex
+> findVertex p1 sca Scene{scPoints = pts} =
+>     Map.foldrWithKey'
+>     (\v p2 m -> m `mplus` if inCircle p1 sca p2 then Just v else Nothing)
+>     Nothing pts
+>
+> handleEvent :: Event -> Scene -> Scene
+> handleEvent (EventKey (MouseButton MiddleButton) Down _ pos) sc =
+>     case findVertex (invertViewPort port pos) (viewPortScale port) sc of
+>         Nothing -> sc
+>         Just v  -> sc{scSelected = Just v}
+>  where viewState = scViewState sc
+>        port      = viewStateViewPort viewState
+> handleEvent (EventKey (MouseButton MiddleButton) Up _ _) sc =
+>>>>>>> f27578ab4374f23b302ae5a3fd1118d4e8fc9086
 >     sc{scSelected = Nothing}
 
 When the user moves the mouse and a vertex is selected, we move the
@@ -362,6 +417,7 @@ vertex where the cursor is:
 
 > handleEvent (EventMotion pos) sc@Scene{scPoints = pts, scSelected = Just v} =
 >     sc{scPoints = Map.insert v (invertViewPort port pos) pts}
+<<<<<<< HEAD
 >  where
 >    port = viewStateViewPort (scViewState sc)
 
@@ -400,6 +456,10 @@ to draw:
 Then an utility function `fromEdges` initialises a scene from a list of
 edges randomising the positions of the vertices in the initial window
 size:
+=======
+>  where port = viewStateViewPort (scViewState sc)
+> handleEvent ev sc = sc{scViewState = updateViewStateWithEvent ev (scViewState sc)}
+>>>>>>> f27578ab4374f23b302ae5a3fd1118d4e8fc9086
 
 > windowSize :: (Int, Int)
 > windowSize = (640, 480)
