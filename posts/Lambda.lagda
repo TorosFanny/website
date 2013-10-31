@@ -596,3 +596,11 @@ And that's it.
 
 You can comment this post [on
 reddit](http://www.reddit.com/r/haskell/comments/1k3b8u/agda_by_example_lambdacalculus/).
+
+***
+
+**Update**: I gave a talk at NY Haskell following this blogpost,
+  although I didn't manage to talk about everything:
+
+
+<div class="yt"><iframe src="//player.vimeo.com/video/77168227" width="600" height="337" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe></div>
