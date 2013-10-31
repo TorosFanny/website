@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 import Text.Pandoc
 
 autoLink :: Inline -> Inline
@@ -13,7 +14,8 @@ stripImages (Image ils _) = ils
 stripImages il            = [il]
 
 transformDoc :: Pandoc -> Pandoc
-transformDoc = bottomUp (concatMap stripImages) . bottomUp (strongToEmph . autoLink)
+transformDoc =
+    bottomUp (concatMap stripImages) . bottomUp (strongToEmph . autoLink)
 
 readDoc :: String -> Pandoc
 readDoc = readHtml def
