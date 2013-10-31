@@ -4,7 +4,7 @@ date: 2013-08-13
 ---
 
 A while ago, me and some friends wrote a [C++
-tool](https://github.com/scvalex/visigoth) to generate and visualise
+tool](https://github.com/scvalex/visigoth-oss) to generate and visualise
 graphs, and I was surprised at how easy it is to "balance" graph
 vertices so that they are laid out in a nice way. This tutorial
 reproduces a version of the algorithm in Haskell, using the

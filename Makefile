@@ -1,12 +1,12 @@
 
-all: site cv/cv.html cv/cv.pdf cv/cv.txt
+all: site cv/cv.html cv/cv.txt
 	./site build
 
 site: site.hs
 	ghc --make site.hs
 
 cv/cv.html: cv.html $(HTML_FILES)
-	sed 's/%%font-size%%/1em/' cv.html |  sed 's/%%formats%%/<li class="formats"><a href=".\/cv.txt">plain text<\/a> \&middot; <a href=".\/cv.pdf">pdf<\/a><\/li>/' > $@
+	sed 's/%%font-size%%/1em/' cv.html |  sed 's/%%formats%%/<li class="formats"><a href=".\/cv.txt">plain text<\/a><\/li>/' > $@
 
 cv/cv-nofmts.html: cv.html $(HTML_FILES)
 	sed 's/%%font-size%%/11pt/' cv.html | sed 's/%%formats%%//' > $@
