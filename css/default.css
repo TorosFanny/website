@@ -23,10 +23,10 @@ body {
     padding:0.8em 0;
     text-align:justify;
     width: 42em;
-    background-image: url('../images/face_bg.png');
-    background-repeat: no-repeat;
+    background-image: url('../images/bg_bars.png');
+    background-repeat: repeat;
     background-attachment: fixed;
-    background-position: right bottom; 
+    background-position: center top;
 }
 
 code, samp {
@@ -167,15 +167,15 @@ a {
 /* Safeguard against the background */
 
 #footer {
-    background-color:rgba(255, 255, 255, 0.5);
+    background-color:rgba(255, 255, 255, 0.7);
 }
 
 #articles {
-    background-color:rgba(255, 255, 255, 0.5);
+    background-color:rgba(255, 255, 255, 0.7);
 }
 
 #article {
-    background-color:rgba(255, 255, 255, 0.5);
+    background-color:rgba(255, 255, 255, 0.7);
 }
 
 pre {
@@ -185,7 +185,7 @@ pre {
 
 /* Pandoc and agda */
 pre.sourceCode, pre.Agda {
-    background-color:#f3f3bb;
+    background-color:rgba(243, 243, 187, 0.7);
     overflow-y: auto;
 }
 
