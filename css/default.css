@@ -181,6 +181,11 @@ pre {
     padding:0.4em 0.7em;
 }
 
+table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
 /* Pandoc and agda */
 pre.sourceCode, pre.Agda {
     background-color:rgba(243, 243, 187, 0.7);
