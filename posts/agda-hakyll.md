@@ -31,8 +31,3 @@ main generator and
 [`posts/AgdaSort.lagda`](https://github.com/bitonic/website/blob/master/posts/AgdaSort.lagda)
 (and the respective metadata file) is a literate Agda file that generates the
 post mentioned before.
-
-**Important note**: the code currently released relies on a function only
-available in the development version of Hakyll.  You can either wait for the new
-version, or `cabal install` from the
-[git repo](https://github.com/jaspervdj/hakyll).
