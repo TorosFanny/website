@@ -14,25 +14,30 @@ summary, time, mark, audio, video {
     vertical-align:baseline;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
     background-color: #ffffff;
     color:#1e1e1e;
     font-family: Georgia, serif;
     font-size:1em;
     margin: 0 auto 0 auto;
-    padding:0.8em 0;
+    padding: 0;
     text-align:justify;
     width: 45em;
-    background-image: url('../images/bg_bars.png');
+    background-image: url('../images/Lose_Richard_Paul.jpg');
+    /* background-image: url('../images/bg_bars.png'); */
     background-repeat: repeat;
     background-attachment: fixed;
     background-position: center top;
 }
 
 code, samp {
-    font-family: DejaVu Sans Mono, Inconsolata, Consolas, monospace;
+    font-family: monospace;
     font-weight: normal;
-    font-size: 0.8em;
+    font-size: 1em;
 }
 
 #title, h1, h2, h3 {
@@ -164,16 +169,13 @@ a {
 
 /* Safeguard against the background */
 
-#footer {
-    background-color:rgba(255, 255, 255, 0.7);
+#wrapper {
+    padding: 0 1em;
+    min-height:100%;
 }
 
-#articles {
-    background-color:rgba(255, 255, 255, 0.7);
-}
-
-#article {
-    background-color:rgba(255, 255, 255, 0.7);
+#article, #articles, #wrapper, #footer {
+    background-color:rgba(255, 255, 255, 0.8);
 }
 
 pre {

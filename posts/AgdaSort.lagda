@@ -18,7 +18,7 @@ Theory](https://en.wikipedia.org/wiki/Intuitionistic_type_theory).
 
 [Agda](http://wiki.portal.chalmers.se/agda/pmwiki.php) is one of the most
 prominent systems of this kind at the moment.  Many Haskell programmers like it
-because it's has very functional slant, doing everything without recurring to
+because it has very functional slant, doing everything without recurring to
 mechanised transformation of terms (of which [Coq](http://coq.inria.fr/) is the
 most famous offender).  In this blog I will try to give some examples that will
 hopefully make you interested.  This first post explains how sorting algorithms

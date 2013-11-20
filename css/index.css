@@ -1,6 +1,7 @@
 body {
+    width: 45em;
     max-width: 1060px;
-    margin: 30px;
+    margin: 1.5em;
     background-color: black;
     background-image: url('../images/home_bg.jpg');
     background-repeat:no-repeat;
@@ -21,15 +22,8 @@ a:visited {
     font-weight: bold;
 }
 
-div {
-    width: 100%;
-    margin: 0;
-}
-
 p {
     background-color: rgba(255,255,255,0.8);
     padding: 0.8em 1em;
-    margin: 0.2em 0;
-    width: 70%;
-    float: left;
+    margin: 0.4em 0;
 }
