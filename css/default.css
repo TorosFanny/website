@@ -27,8 +27,7 @@ body {
     padding: 0;
     text-align:justify;
     width: 45em;
-    background-image: url('../images/Lose_Richard_Paul.jpg');
-    /* background-image: url('../images/bg_bars.png'); */
+    background-image: url('../images/blog_bg.jpg');
     background-repeat: repeat;
     background-attachment: fixed;
     background-position: center top;
@@ -63,7 +62,7 @@ h1 a, h2 a, h3 a {
                  5px 5px 0px #476871,
                  6px 6px 0px #476871,
                  7px 7px 0px #476871;
-    color:#E3D7BF;
+    color:white;
     text-decoration:none;
 }
 
@@ -91,17 +90,21 @@ div {
     padding:0.15em 0;
 }
 
-#articles .date {
+.date {
     color:#5b5b5b;
     font-weight:normal;
-    padding:0 0.5em 0 0;
     text-shadow: none;
+    font-size: 0.7em;
+    vertical-align: middle;
+}
+
+#articles .date {
+    padding:0 0.5em 0 0;
 }
 
 #articles a {
     color: #476871;
     font-size: 1.8em;
-    /* font-weight: bold; */
     text-decoration: none;
     text-shadow: -1px -1px 0 black;
 }
@@ -116,12 +119,9 @@ div {
     font-size: 1.8em;
 }
 
-#article h1 em {
-    color:#5b5b5b;
+#article h1 .date {
     float:right;
-    font-weight:normal;
     padding:0 0 0 1em;
-    text-shadow:none;
 }
 
 p {
