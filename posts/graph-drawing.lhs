@@ -78,8 +78,8 @@ iterating through the neighbours of a given vertex.  With that in mind,
 the simplest thing to do is simply store the graph as the set of
 neighbouring nodes for each `Vertex`:
 
-> -- INVARIANT Every `Vertex` present in a set of neighbours is present as
-> -- a key in the `Map`.
+> -- INVARIANT Every `Vertex` present in a set of neighbours is
+> -- present as a key in the `Map`.
 > newtype Graph = Graph {grNeighs :: Map Vertex (Set Vertex)}
 >
 > emptyGraph :: Graph
@@ -140,7 +140,8 @@ move them around, so we add a field recording whether we have a `Vertex`
 grabbed or not.  We also make use of `gloss` `ViewState`, which will let
 us implement panning, rotating, and zooming in an easy way.
 
-> -- INVARIANT The keys in `scGraph` are the same as the keys in `scPoints`.
+> -- INVARIANT The keys in `scGraph` are the same as the keys
+> -- in `scPoints`.
 > data Scene =
 >     Scene { scGraph     :: Graph
 >           , scPoints    :: Map Vertex Point
@@ -197,7 +198,8 @@ Drawing a `Vertex` is simply drawing a circle.  We use `ThickCircle` to
 get the circle to be filled instead of just an outline.
 
 > drawVertex :: Vertex -> Scene -> Picture
-> drawVertex v sc = Translate x y (ThickCircle (vertexRadius / 2) vertexRadius)
+> drawVertex v sc =
+>     Translate x y (ThickCircle (vertexRadius / 2) vertexRadius)
 >   where (x, y) = vertexPos v sc
 
 Drawing an `Edge` is drawing a `Line`.
@@ -302,7 +304,8 @@ user, if there is one.
 >     foldr f sc (Map.keys neighs)
 >   where
 >     f n sc' =
->         let pt = if Just n == sel then vertexPos n sc else updatePosition dt n sc'
+>         let pt = if Just n == sel
+>                  then vertexPos n sc else updatePosition dt n sc'
 >         in scAddVertex n pt sc'
 
 User interaction
@@ -322,7 +325,8 @@ the drawn version of a vertex.
 position where the user has clicked is in it.
 
 > findVertex :: Point -> Float -> Scene -> Maybe Vertex
-> findVertex p1 sca Scene{scPoints = pts} = Map.foldrWithKey' f Nothing pts
+> findVertex p1 sca Scene{scPoints = pts} =
+>     Map.foldrWithKey' f Nothing pts
 >   where
 >     f _ _  (Just v) = Just v
 >     f v p2 Nothing  = if inCircle p1 sca p2 then Just v else Nothing

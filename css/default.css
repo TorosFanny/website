@@ -19,65 +19,55 @@ html, body {
 }
 
 body {
-    background-color: #ffffff;
-    color:#1e1e1e;
-    font-family: Georgia, serif;
-    font-size:1em;
+    color: #00000f;
+    font-family: "century-old-style-std", Garamond, serif;
+    font-size:1.1em;
     margin: 0 auto 0 auto;
     padding: 0;
     text-align:justify;
-    width: 45em;
-    background-image: url('../images/blog_bg.jpg');
-    background-repeat: repeat;
-    background-attachment: fixed;
-    background-position: center top;
+    width: 100%;
+    background-color: #FFFFF0;
 }
 
 code, samp {
-    font-family: monospace;
+    font-family: "courier-prime", monospace;
     font-weight: normal;
-    font-size: 1em;
+    font-size: 0.9em;
 }
 
-#title, h1, h2, h3 {
-    font-family: Helvetica, Arial, sans-serif;
+#title {
+    background-color: #00000f;
+    color: #fffff0;
+    text-align: center;
+    font-weight: bold;
+    font-size: 5.5em;
+    padding: 0.4em 0.2em;
+    font-family: "futura-pt", Helvetica, Arial, sans-serif;
+}
+
+#title a {
+    text-decoration: none;
+    color: white;
+}
+
+#wrapper {
+    width: 45em;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+h1, h2, h3 {
+    font-family: "futura-pt", Helvetica, Arial, sans-serif;
 }
 
 h1 a, h2 a, h3 a {
     text-decoration: none;
 }
 
-#title {
-    padding:0;
-    text-align:right;
-    /* font-weight: bold; */
-}
-
-#title a {
-    font-size:4em;
-    text-shadow: 1px 1px 0px black,
-                 2px 2px 0px #476871,
-                 3px 3px 0px #476871,
-                 4px 4px 0px #476871,
-                 5px 5px 0px #476871,
-                 6px 6px 0px #476871,
-                 7px 7px 0px #476871;
-    color:white;
-    text-decoration:none;
-}
-
-div {
-    padding: 0.7em;
+#wrapper {
+    padding: 0.7em 0.3em;
 }
  
-#footer a {
-    color:#1e1e1e;
-}
-
-#footer {
-    text-align:right;
-}
-
 /* Stuff for the index */
 
 #articles ul {
@@ -92,31 +82,33 @@ div {
 
 .date {
     color:#5b5b5b;
-    font-weight:normal;
+    font-weight: 400;
     text-shadow: none;
     font-size: 0.7em;
     vertical-align: middle;
+    font-style: italic;
 }
 
 #articles .date {
-    padding:0 0.5em 0 0;
+    display: inline-block;
+    padding: 0 0.5em 0 0;
 }
 
 #articles a {
-    color: #476871;
+    color: #3e4a4e;
     font-size: 1.8em;
     text-decoration: none;
-    text-shadow: -1px -1px 0 black;
+    font-weight: 700;
 }
 
 /* Stuff for the article display */
 
 #article h1 {
-    color:#476871;
+    color: #3e4a4e;
     padding:0.15em 0;
     text-align:left;
-    text-shadow: -1px -1px 0 black;
     font-size: 1.8em;
+    font-weight: 700;
 }
 
 #article h1 .date {
@@ -127,7 +119,8 @@ div {
 p {
     padding:0.1em 0;
     text-indent:1.5em;
-    font-family: Georgia, serif;
+    font-family: "century-old-style-std", Garamond, serif;
+    font-size: 1em;
 }
 
 blockquote {
@@ -144,15 +137,17 @@ blockquote p {
 #article h2 {
     font-size:1.6em;
     padding:0.6em 0 0.3em 0;
+    font-weight: 500;
 }
 
 #article h3 {
     font-size:1.3em;
     padding:0.6em 0 0.3em 0;
+    font-weight: 500;
 }
 
 a {
-    color: black;
+    color: #00000f;
 }
 
 #article ul {
@@ -167,20 +162,10 @@ a {
     text-indent: 0;
 }
 
-/* Safeguard against the background */
-
-#wrapper {
-    padding: 0 1em;
-    min-height:100%;
-}
-
-#article, #articles, #wrapper, #footer {
-    background-color:rgba(255, 255, 255, 0.9);
-}
-
 pre {
     margin:0.2em 0;
     padding:0.4em 0.7em;
+    font-size: 1em;
 }
 
 table {
@@ -204,11 +189,11 @@ table.sourceCode {
 }
 
 ::-webkit-scrollbar-track {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: #00000f;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: #FFFFF0;
 }
 
 #article td {
