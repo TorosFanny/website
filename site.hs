@@ -12,7 +12,7 @@ main :: IO ()
 main =
     hakyll $
     do -- Assets
-       match ("images/*" .||. "css/*" .||. "js/*" .||. "fonts/*") $
+       match ("images/*" .||. "css/*" .||. "js/*") $
            do route idRoute; compile copyFileCompiler
 
        -- Templates
@@ -93,4 +93,4 @@ writerOpts :: WriterOptions
 writerOpts = defaultHakyllWriterOptions {writerTableOfContents = True}
 
 agdaOpts :: CommandLineOptions
-agdaOpts = defaultOptions {optIncludeDirs = Left [".", "/home/bitonic/src/agda-lib/src"]}
+agdaOpts = defaultOptions {optIncludeDirs = Left [".", "/tmp/lib-0.7/src"]}

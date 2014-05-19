@@ -8,9 +8,7 @@ $(document).ready(function() {
 });
 
 function getEffect() {
-    // return effects[Math.floor(Math.random() * effects.length)];
-    var day = Math.round(new Date().getTime() / 1000 / 60 / 60 / 24);
-    return effects[day % effects.length];
+    return effects[Math.floor(Math.random() * effects.length)];
 }
 
 function colorsTrans(el) {
