@@ -95,30 +95,38 @@ module Trie
     , complete
     ) where
 
-import Data.Map (Map)
+import           Data.Map (Map)
 import qualified Data.Map as Map
 
+-- | At each node, we store a 'Bool' indicating if we are at the end of
+-- a word.
 data Trie a = Trie (Map a (Trie a)) Bool
 
-empty    :: Ord a => Trie a
-insert   :: Ord a => [a] -> Trie a -> Trie a
-find     :: Ord a => [a] -> Trie a -> Bool
-complete :: Ord a => [a] -> Trie a -> [[a]]
-
+empty :: Ord a => Trie a
 empty = Trie Map.empty False
 
-insert []      (Trie m _) = Trie m True
-insert (c : w) (Trie m b) =
-    case Map.lookup c m of
-        Nothing -> insert (c : w) (Trie (Map.insert c empty m) b)
-        Just tr -> Trie (Map.insert c (insert w tr) m) b
+insert :: Ord a => [a] -> Trie a -> Trie a
+insert [] (Trie tries _) =
+    Trie tries True
+insert word@(firstChar : rest) (Trie tries wordEnd) =
+    case Map.lookup firstChar tries of
+        Nothing ->
+            insert word (Trie (Map.insert firstChar empty tries) wordEnd)
+        Just trie ->
+            Trie (Map.insert firstChar (insert rest trie) tries) wordEnd
 
-find []      (Trie _ b) = b
-find (c : w) (Trie m _) = maybe False (find w) (Map.lookup c m)
+find :: Ord a => [a] -> Trie a -> Bool
+find [] (Trie _ wordEnd) =
+    wordEnd
+find (firstChar : rest) (Trie tries _) =
+    maybe False (find rest) (Map.lookup firstChar tries)
 
-complete []      (Trie m b) =
-    [[] | b] ++ concat [map (c :) (complete [] tr) | (c, tr) <- Map.toList m]
-complete (c : w) (Trie m _) = maybe [] (map (c :) . complete w) (Map.lookup c m)
+complete :: Ord a => [a] -> Trie a -> [[a]]
+complete [] (Trie tries wordEnd) =
+    (if wordEnd then [[]] else []) ++
+    concat [map (char :) (complete [] trie) | (char, trie) <- Map.toList tries]
+complete (firstChar : rest) (Trie tries _) =
+    maybe [] (map (firstChar :) . complete rest) (Map.lookup firstChar tries)
 ```
 
 I didn't read the Python version too carefully so if I missed something let me
@@ -126,3 +134,8 @@ know!
 
 You can discuss this post on
 [reddit](http://www.reddit.com/r/programming/comments/q80nh/haskell_python_and_readability/).
+
+* * *
+
+**Update**: after the reddit discussion, I made the variable names a bit
+clearer.
