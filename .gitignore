@@ -1,0 +1,15 @@
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+*.agdai
+/_cache/
+/_site/
+/cv/cv.html
+/dist/
+/agdalib/
