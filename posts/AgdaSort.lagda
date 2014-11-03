@@ -470,8 +470,6 @@ module Nat where
     suc  : ℕ → ℕ
 
   {-# BUILTIN NATURAL ℕ    #-}
-  {-# BUILTIN ZERO    zero #-}
-  {-# BUILTIN SUC     suc  #-}
 \end{code}
 
 The definition for naturals is the usual one---the pragmas are there so that we

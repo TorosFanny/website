@@ -93,4 +93,4 @@ writerOpts :: WriterOptions
 writerOpts = defaultHakyllWriterOptions {writerTableOfContents = True}
 
 agdaOpts :: CommandLineOptions
-agdaOpts = defaultOptions {optIncludeDirs = Left [".", "/tmp/lib-0.7/src"]}
+agdaOpts = defaultOptions {optIncludeDirs = Left [".", "/home/bitonic/src/website/agdalib/src"]}

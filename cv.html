@@ -3,12 +3,19 @@
   <head>
     <title>Francesco Mazzoli - Curriculum Vitae</title>
     <meta charset="utf-8">
-    <link rel="stylesheet" type="text/css" href="/css/fonts.css" />
+    <script type="text/javascript" src="//use.typekit.net/mvv1kdm.js"></script>
+    <script type="text/javascript">try{Typekit.load();}catch(e){}</script>   
     <style type="text/css">
       body {
-          font-family: Georgia, serif;
-          font-size: %%font-size%%;
+          font-family: "century-old-style-std", Georgia, Garamond, serif;
+          font-size: 1em,
           color: black;
+          background-color: #FFFFF0;
+      }
+
+      .nobreak {
+          margin: 0;
+          padding: 0;
       }
 
       a {
@@ -19,7 +26,7 @@
           font-size: 2em;
           display: inline;
           font-variant: small-caps;
-          font-family: Arial, sans-serif;
+          font-family: "futura-pt", Helvetica, Arial, sans-serif;
       }
 
       h2 {
@@ -27,13 +34,13 @@
           font-variant: small-caps;
           font-size:1.5em;
           border-bottom: 1px solid black;
-          font-family: Arial, sans-serif;
+          font-family: "futura-pt", Helvetica, Arial, sans-serif;
       }
 
       h3 {
           font-size:1.2em;
           border-bottom: 1px solid #ccc;
-          font-family: Arial, sans-serif;
+          font-family: "futura-pt", Helvetica, Arial, sans-serif;
           margin-left: 1em;
           margin-right: 1em;
       }
@@ -51,9 +58,10 @@
       }
 
       #wrap {
-          width: 50em;
-          margin: 1.5em auto;
+          width: 40em;
+          margin: 1.5em;
           text-align: left;
+          padding: 1.6em;
       }
 
       p {
@@ -80,8 +88,11 @@
 
       .date {
           font-weight: normal;
-          font-size: 0.8em;
           float: right;
+      }
+
+      .date span {
+          font-size: 0.8em;
       }
 
       #github {
@@ -91,34 +102,48 @@
       .datesep {
           display: none;
       }
-
-      @page { 
-          size: auto;
-
-          margin: 20mm 25mm;
-      }
       
       .scaps {
           font-variant: small-caps;
       }
     </style>
+    <style type="text/css" media="print">
+      body {
+          background-color: white;
+      }
+
+      #wrap {
+          width: 50em;
+      }
+
+      @page { 
+          size: auto;
+          margin: 1em 0;
+      }
+
+      .nobreak {
+          page-break-inside: avoid;
+      }
+    </style>
+
 
   </head>
 
   <body>
     <div id="wrap">
-      <h1><img src="logo.png" alt="Francesco Mazzoli"></h1> 
+      <!-- <h1><img src="logo.png" alt="Francesco Mazzoli"></h1>  -->
+      <h1>Francesco Mazzoli</h1> 
 
       <div id="contact">
         <ul>
           <li><a href="mailto:f@mazzo.li">f@mazzo.li</a> &middot; <a href="http://mazzo.li">http://mazzo.li</a></li>
-          %%formats%%
         </ul>
       </div>
 
       <h2>Education</h2>
 
-      <h3><span class="date">May 2014<span class="datesep"> &middot;</span></span> PhD
+      <div class="nobreak">
+      <h3><span class="date"><span>May 2014&ndash;?</span><span class="datesep"> &middot;</span></span> PhD
         Candidate at Chalmers University of Technology. </h3>
       <p>
         I have recently started my PhD, focusing on <strong>Type
@@ -126,8 +151,10 @@
         as <strong>Agda</strong>.  I am part of the programming logic
         group headed by Thierry Coquand.
       </p>
+      </div>
 
-      <h3><span class="date">Jun 2013<span class="datesep"> &middot;</span></span> MEng
+      <div class="nobreak">
+      <h3><span class="date"><span>Oct 2009&ndash;Jun 2013</span><span class="datesep"> &middot;</span></span> MEng
         in Computing, Imperial College London</h3>
       <p>
         <p><strong>First class</strong> degree.</p>
@@ -135,12 +162,16 @@
         Implementing Observational Equality</strong> (IBM Project Prize, <a href="http://www3.imperial.ac.uk/computing/teaching/ug/ug-distinguished-projects">http://www3.imperial.ac.uk/computing/teaching/ug/ug-distinguished-projects</a>).
         </p>
       </p>
+      </div>
 
-      <h3><span class="date">Jul 2009<span class="datesep">
+      <div class="nobreak">
+      <h3><span class="date"><span>Set 2004&ndash;Jul 2009</span><span class="datesep">
         &middot;</span></span> Esame di Stato, Liceo scientifico Augusto
         Righi</h3>
       <p>Overall exam result: <strong>95%</strong>. </p>
+      </div>
 
+      <div class="nobreak">
       <h2>Skills &amp; Competences</h2>
       <h3>Programming &amp; Software Engineering</h3>
       <ul>
@@ -193,32 +224,37 @@
           and <strong>Perforce</strong>).
         </li>
       </ul>
+      </div>
 
+      <div class="nobreak">
       <h3>Soft Skills</h3>
       <ul>
         <li>
-          Good experience in working in teams, both for personal and university
-          projects.
+          Good experience in working in teams, both at at work and for
+          personal projects.
         </li>
 
         <li>Acted as a moderator in several online forums.</li>
 
         <li>
           Active in the open source community, mainly trough mailing lists and
-          IRC (most of the time as "bitonic"
+          IRC (most of the time as &ldquo;bitonic&rdquo;
           on <a href="irc://chat.freenode.net/haskell">irc://chat.freenode.net/haskell</a>
           and other channels).
         </li>
       </ul>
+      </div>
 
       <h2>Work Experience</h2>
 
-      <h3><span class="date">Sep 2013&ndash;April 2014<span class="datesep">
+      <div class="nobreak">
+      <h3><span class="date"><span>Sep 2013&ndash;April 2014</span><span class="datesep">
             &middot;</span></span> Better (ex Erudify)</h3>
       <p>
         Worked for 8 months as a Haskell programmer at Better, a startup
         producing tools for e-learning.
       </p>
+      </div>
 
       <p>
         Most of my tasks revolved around the backend of the main
@@ -230,7 +266,8 @@
         Left to pursue a PhD.
       </p>
 
-      <h3><span class="date">Jan&ndash;Dec 2012<span class="datesep">
+      <div class="nobreak">
+      <h3><span class="date"><span>Jan&ndash;Dec 2012</span><span class="datesep">
             &middot;</span></span> Industrial Placement at RabbitMQ</h3>
       <p>
         Worked at RabbitMQ, first as a contractor, then full time from April to
@@ -242,8 +279,10 @@
         various other related software&mdash;mainly plugins for the broker
         and AMQP clients.
       </p>
+      </div>
 
-      <h3><span class="date">Jun&ndash;Sep 2011<span class="datesep"> &middot;</span></span>
+      <div class="nobreak">
+      <h3><span class="date"><span>Jun&ndash;Sep 2011</span><span class="datesep"> &middot;</span></span>
         Internship in Software Engineering at Google</h3>
       <p>
         Worked on the Android Market, developing a system that enables the
@@ -256,27 +295,35 @@
         Worked with various Google technologies, including GWT, Guice, Protocol
         buffers, and Megastore.
       </p>
+      </div>
 
-      <h3><span class="date">Dec 2010<span class="datesep"> &middot;</span></span>
+      <div class="nobreak">
+      <h3><span class="date"><span>Dec 2010</span><span class="datesep"> &middot;</span></span>
         andreaciofi.com</h3>
       <p>
         Website for Andrea Ciofi, architect. Implemented in Pylons and
         CouchDB. Visit the
         website: <a href="http://andreaciofi.com">http://andreaciofi.com</a>.
       </p>
+      </div>
 
       <h2>Personal projects</h2>
 
+      <div class="nobreak">
       <h3>Assorted Software &middot; <a href="https://github.com/bitonic/">https://github.com/bitonic/</a></h3>
+      </div>
 
-      <h3><span class="date">Feb 2012&ndash;?<span class="datesep"> &middot;</span></span> Technical blog</h3>
+      <div class="nobreak">
+      <h3><span class="date"><span>Feb 2012&ndash;?</span><span class="datesep"> &middot;</span></span> Technical blog</h3>
       <p>
         I have recently started to write articles mostly about Haskell
         and type theory.  Available
         at <a href="http://mazzo.li/archive.html">mazzo.li/archive.html</a>.
       </p>
+      </div>
 
-      <h3><span class="date">Aug 2010&ndash;Aug 2011<span class="datesep">
+      <div class="nobreak">
+      <h3><span class="date"><span>Aug 2010&ndash;Aug 2011</span><span class="datesep">
         &middot;</span></span> troppotardi.com</h3>
       <p>
         Open source platform to promote young photographers, reviewing photos
@@ -288,16 +335,20 @@
         Visit the website: <a href="http://troppotardi.com">http://troppotardi.com</a>
         (halted).
       </p>
+      </div>
       
-
       <h2>Achievements &amp; University Projects</h2>
-      <h3><span class="date">June 2013<span class="datesep"> &middot;</span></span>
+
+      <div class="nobreak">
+      <h3><span class="date"><span>June 2013</span><span class="datesep"> &middot;</span></span>
         IBM Project Prize</h3>
       <p>
         See <a href="http://www3.imperial.ac.uk/computing/teaching/ug/ug-distinguished-projects">http://www3.imperial.ac.uk/computing/teaching/ug/ug-distinguished-projects</a>.
       </p>
+      </div>
 
-      <h3><span class="date">Oct 2012<span class="datesep"> &middot;</span></span>
+      <div class="nobreak">
+      <h3><span class="date"><span>Oct 2012</span><span class="datesep"> &middot;</span></span>
         Wonga Scolarship</h3>
       <p>
         Won a competition by Wonga directed to Masters students, with 3&ndash;5
@@ -305,23 +356,30 @@
         software that, given Name Surname pairs, would correct various sorts of
         problems, such as spelling mistakes or OCR errors.
       </p>
+      </div>
 
-      <h3><span class="date">Feb 2012<span class="datesep"> &middot;</span></span>
+      <div class="nobreak">
+      <h3><span class="date"><span>Feb 2012</span><span class="datesep"> &middot;</span></span>
         Imperial Hackathon</h3>
       <p>
         Hackathon sponsored by Facebook and JPMorgan. Our 5 people team coded a
         Q&amp;A system in less than 36 hours, which won the competition.
       </p>
+      </div>
 
-      <h3><span class="date">May&ndash;Jun 2011<span class="datesep"> &middot;</span></span>
+      <div class="nobreak">
+      <h3><span class="date"><span>May&ndash;Jun 2011</span><span class="datesep"> &middot;</span></span>
         The IBM 2nd Year Group Project Prize</h3>
       <p>
         See <a href="http://www3.imperial.ac.uk/computing/teaching/prizes/2011/ug#17">http://www3.imperial.ac.uk/computing/teaching/prizes/2011/ug#17</a>.
       </p>
+      </div>
 
-      <h3><span class="date">Apr 2010<span class="datesep"> &middot;</span></span>
+      <div class="nobreak">
+      <h3><span class="date"><span>Apr 2010</span><span class="datesep"> &middot;</span></span>
         Topics in AI, Deutsche Bank Prize</h3>
       <p>
+      </div>
 
       <div id="refs"><small>References are available on request.</small></div>
     </div>
